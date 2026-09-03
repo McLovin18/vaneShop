@@ -259,6 +259,8 @@ export const Navbar = () => {
   const links = [
     { href: "/", label: "Inicio" },
     { href: "/productos", label: "Catálogo" },
+    { href: "/blogs", label: "Blogs" },
+
 
   ];
 
