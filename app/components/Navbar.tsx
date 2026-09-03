@@ -641,7 +641,7 @@ export const Navbar = () => {
                 className="font-bold text-lg"
                 style={{ color: BRAND.white, letterSpacing: "0.08em" }}
               >
-                JULIANA <span style={{ color: BRAND.gold }}>BASICS</span>
+                Vane Shop
               </span>
               <button
                 onClick={() => setMobileOpen(false)}
