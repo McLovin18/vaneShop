@@ -132,7 +132,7 @@ export default function LoginPage() {
           </svg>
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight mb-2 text-slate-900 dark:text-white">
-          Juliana Basics
+          Vanese-Shop
         </h1>
         <p className="text-slate-500 dark:text-slate-400 text-base">
           Acceso exclusivo para administración.

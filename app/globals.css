@@ -13,8 +13,8 @@
 
   /* --- Colores base de la paleta (para uso directo si se necesita) --- */
   --color-tobacco: #b59e7d;
-  --color-mahogany: #584738;
-  --color-vanilla: #f0ede4;
+  --color-mahogany: #eedbca;
+  --color-vanilla: #faf1ee;
   --color-mountain: #aaa396;
   --color-sand: #cec1a8;
 
@@ -25,7 +25,7 @@
 
   /* --- Semántica --- */
   --background: var(--color-vanilla);
-  --foreground: var(--color-mahogany);
+  --foreground: var(--color-tobacco);
 
   --bg: var(--color-vanilla);
   --bgSecondary: var(--color-sand);

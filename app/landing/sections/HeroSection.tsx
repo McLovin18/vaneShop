@@ -7,37 +7,7 @@ import type {
   FieldPosition,
 } from "../../lib/landing-types";
 
-// ── Hook ────────────────────────────────────────────────────────────────────
-function useGoogleMapsPlaceDetails(placeId?: string, enabled?: boolean) {
-  const [data, setData] = React.useState<{
-    rating?: number;
-    user_ratings_total?: number;
-  } | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (!enabled || !placeId) return;
-    setLoading(true);
-    setError(null);
-    fetch(`/api/google-maps?place_id=${placeId}`)
-      .then((res) => res.json())
-      .then((json) => {
-        if (
-          typeof json.rating !== "undefined" &&
-          typeof json.ratingCount !== "undefined"
-        ) {
-          setData({ rating: json.rating, user_ratings_total: json.ratingCount });
-        } else {
-          setError(json.error || "No se pudo obtener la información de Google Maps");
-        }
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [placeId, enabled]);
-
-  return { data, loading, error };
-}
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 type HeroItem = {
@@ -200,9 +170,33 @@ export default function HeroSection({
   }, [device]);
 
   const placeId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_PLACE_ID;
-  const hasGoogleMaps =
-    googleMaps || (items && items.some((i) => i.googleMaps));
-  const { data: googleMapsData } = useGoogleMapsPlaceDetails(placeId, hasGoogleMaps);
+  const hasGoogleMaps = Boolean(
+    googleMaps || (items && items.some((i) => i.googleMaps))
+  );
+  
+  // Google Maps data - integrado directamente para evitar problemas de Hooks
+  const [googleMapsData, setGoogleMapsData] = React.useState<{
+    rating?: number;
+    user_ratings_total?: number;
+  } | null>(null);
+  
+  React.useEffect(() => {
+    if (!hasGoogleMaps || !placeId) return;
+    
+    fetch(`/api/google-maps?place_id=${placeId}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (
+          typeof json.rating !== "undefined" &&
+          typeof json.ratingCount !== "undefined"
+        ) {
+          setGoogleMapsData({ rating: json.rating, user_ratings_total: json.ratingCount });
+        }
+      })
+      .catch(() => {
+        // Silenciar errores de Google Maps
+      });
+  }, [placeId, hasGoogleMaps]);
 
   // ── TODOS los hooks antes de cualquier return condicional ────────────────
   const [currentIndex, setCurrentIndex] = React.useState(0);
@@ -269,12 +263,46 @@ export default function HeroSection({
     }
   }, [currentIndex, heroItems]);
 
+  // Screen type detection para aspect ratio
+  const [screenType, setScreenType] = React.useState<"mobile" | "tablet" | "desktop">("desktop");
+
+  React.useEffect(() => {
+    // Debounce resize para mejorar rendimiento en iOS
+    let timeoutId: NodeJS.Timeout;
+    const update = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const w = window.innerWidth;
+        if (w < 640) setScreenType("mobile");
+        else if (w < 1024) setScreenType("tablet");
+        else setScreenType("desktop");
+      }, 150);
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
   // ── Return condicional DESPUÉS de todos los hooks ────────────────────────
   if (!heroItems.length) return null;
 
   const current = heroItems[Math.min(currentIndex, heroItems.length - 1)];
   const currentFieldStyles = current.fieldStyles || {};
   const currentFieldPositions = current.fieldPositions || fieldPositions || {};
+
+  const innerStyle: React.CSSProperties = {
+    aspectRatio:
+      screenType === "mobile"
+        ? "6 / 5"
+        : screenType === "tablet"
+        ? "11 / 9"
+        : "2400 / 1300",
+    overflow: "hidden",
+  };
 
   // debug logs removed
 
@@ -355,40 +383,7 @@ export default function HeroSection({
   };
 
 
-  const [screenType, setScreenType] = React.useState<"mobile" | "tablet" | "desktop">("desktop");
 
-
-
-React.useEffect(() => {
-  // Debounce resize para mejorar rendimiento en iOS
-  let timeoutId: NodeJS.Timeout;
-  const update = () => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      const w = window.innerWidth;
-      if (w < 640) setScreenType("mobile");
-      else if (w < 1024) setScreenType("tablet");
-      else setScreenType("desktop");
-    }, 150);
-  };
-
-  update();
-  window.addEventListener("resize", update);
-  return () => {
-    clearTimeout(timeoutId);
-    window.removeEventListener("resize", update);
-  };
-}, []);
-
-const innerStyle: React.CSSProperties = {
-  aspectRatio:
-    screenType === "mobile"
-      ? "6 / 5"
-      : screenType === "tablet"
-      ? "11 / 9"
-      : "2400 / 1300",
-  overflow: "hidden",
-};
 
 
   return (

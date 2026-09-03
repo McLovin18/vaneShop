@@ -1,47 +1,50 @@
 import "./globals.css";
-
-import Footer from "./components/Footer";
-import { cookies } from "next/headers";
-import Navbar from "./components/Navbar";
-import { UserProvider } from "./context/UserContext";
 import { OnboardingProvider } from "./context/OnboardingContext";
 import { ToastProvider } from "./context/ToastContext";
 import LayoutContentClient from "./components/LayoutContentClient";
 import { StructuredData } from "./components/StructuredData";
 import type { Metadata, Viewport } from "next";
-import { Source_Serif_4 } from "next/font/google";
+import { Cormorant_Garamond } from "next/font/google";
+import { Inter } from "next/font/google";
 
 // ISR Global: Revalidar sitio cada 30 minutos
 // Optimiza regeneración de página principal y otros contenidos estáticos
 export const revalidate = 1800;
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://julianabasics.com.ec";
-const SITE_NAME = "Juliana Basics";
-const sourceSerif4 = Source_Serif_4({
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://vaneseshop.com"; // ⚠️ Reemplazar con dominio de producción
+const SITE_NAME = "vaneseshop";
+const cormorantGaramond = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["400"],
+  weight: ["400", "600"],
   style: ["normal", "italic"],
-  variable: "--font-source-serif-4",
+  variable: "--font-cormorant-garamond",
+});
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "Juliana Basics - Moda & Outfits",
-    template: "%s | Juliana Basics",
+    default: "vaneseshop | Arte Textil, Pintura y Sombreros de Autor",
+    template: "%s | vaneseshop",
   },
   description:
-    "Tienda de moda y outfits. Descubre las últimas tendencias en ropa y accesorios, con piezas pensadas para cada estilo. Envíos a todo Ecuador.",
+    "vaneseshop: piezas de arte con identidad e historia por Vanessa Salazar. Textil, pintura y sombreros de autor con Método TransformArte.",
   keywords: [
-    "moda",
-    "outfits",
-    "ropa",
-    "tienda de ropa Ecuador",
-    "tendencias moda",
-    "accesorios",
-    "estilo",
-    "Juliana Basics",
+    "arte textil Ecuador",
+    "sombreros de autor",
+    "pintura artesanal Ecuador",
+    "Vanessa Salazar artista",
+    "vaneseshop",
+    "arte con identidad",
+    "Método TransformArte",
+    "piezas únicas de arte",
+    "artista visual Ecuador",
+    "emprendimiento femenino Ecuador",
   ],
-  creator: "Juliana Basics",
+  creator: "vaneseshop",
   metadataBase: new URL(SITE_URL),
   icons: {
     icon: "/favicon.ico",
@@ -53,18 +56,18 @@ export const metadata: Metadata = {
   // Open Graph - Redes Sociales
   openGraph: {
     type: "website",
-    locale: "es_ES",
+    locale: "es_EC",
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: "Juliana Basics - Moda & Outfits",
+    title: "vaneseshop | Arte Textil, Pintura y Sombreros de Autor",
     description:
-      "Descubre las últimas tendencias en ropa y accesorios. Piezas pensadas para cada estilo, con envíos a todo Ecuador.",
+      "vaneseshop: piezas de arte con identidad e historia por Vanessa Salazar. Textil, pintura y sombreros de autor con Método TransformArte.",
     images: [
       {
         url: `${SITE_URL}/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: "Juliana Basics - Moda & Outfits",
+        alt: "vaneseshop - Arte Textil, Pintura y Sombreros de Autor",
         type: "image/jpeg",
       },
     ],
@@ -73,9 +76,9 @@ export const metadata: Metadata = {
   // Twitter Card
   twitter: {
     card: "summary_large_image",
-    title: "Juliana Basics - Moda & Outfits",
+    title: "vaneseshop | Arte con Identidad e Historia",
     description:
-      "Descubre las últimas tendencias en ropa y accesorios. Envíos a todo Ecuador.",
+      "Piezas únicas de arte textil, pintura y sombreros de autor. Método TransformArte.",
     images: [`${SITE_URL}/twitter-image.jpg`],
   },
 
@@ -109,6 +112,8 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: SITE_NAME,
   },
+
+  category: "Arte y Artesanía",
 };
 
 // Viewport export - separate from metadata in Next.js 16
@@ -117,49 +122,26 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  // Optimizaciones específicas para iOS Safari
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a1a1a" },
-  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={sourceSerif4.variable}>
+    <html lang="es" className={`${cormorantGaramond.variable} ${inter.variable}`}>
       <head>
-        {/* Google Analytics gtag.js - solo cargar si no es WebView para mejor rendimiento */}
+        {/* Google Analytics gtag.js - insertado justo después de <head> */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+        {/* ⚠️ Reemplazar G-XXXXXXXXXX con el ID de Analytics propio de vaneseshop */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // Detectar WebView para no cargar GA en navegadores in-app
-              if (!navigator.userAgent.includes('Instagram') && 
-                  !navigator.userAgent.includes('FBAN') && 
-                  !navigator.userAgent.includes('FBAV') &&
-                  !navigator.userAgent.includes('TikTok') &&
-                  !navigator.userAgent.includes('Twitter') &&
-                  !navigator.userAgent.includes('LinkedIn') &&
-                  !navigator.userAgent.includes('wv')) {
-                (function() {
-                  var script = document.createElement('script');
-                  script.async = true;
-                  script.src = 'https://www.googletagmanager.com/gtag/js?id=G-K1Q0MYDSKF';
-                  document.head.appendChild(script);
-                  script.onload = function() {
-                    window.dataLayer = window.dataLayer || [];
-                    function gtag(){dataLayer.push(arguments);}
-                    gtag('js', new Date());
-                    gtag('config', 'G-K1Q0MYDSKF');
-                  };
-                })();
-              }
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-XXXXXXXXXX');
             `,
           }}
         />
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
-        {/* Cargar solo los pesos de fuente necesarios para reducir carga en WebView */}
-        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
-        
         <StructuredData />
       </head>
       <body className="relative">

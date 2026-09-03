@@ -9,7 +9,6 @@ import { getLandingPage } from "./lib/landing-db";
 import { obtenerProductos } from "./lib/productos-db";
 import type { LandingSection } from "./lib/landing-types";
 import { useUser } from "./context/UserContext";
-import FaqSection from "./components/FaqSection";
 
 export default function Home() {
   const { isLogged } = useUser();
@@ -190,7 +189,6 @@ const lastHeroIndex = useMemo(() => {
             No hay secciones publicadas para mostrar.
           </div>
         )}
-        {!loading && <FaqSection />}
       </main>
       {!isLogged && <BottomBarPublic />}
     </>

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTracking } from "../lib/useAnalytics";
 import WhatsAppFloatingButton from "./WhatsAppFloatingButton";
@@ -12,9 +12,9 @@ const IconInstagram = () => (
   </svg>
 );
 
-const IconFacebook = () => (
+const IconLocation = () => (
   <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
-    <path d="M22 12.061C22 6.505 17.523 2 12 2S2 6.505 2 12.061c0 5.022 3.657 9.184 8.438 9.939v-7.03H7.898v-2.909h2.54V9.845c0-2.53 1.492-3.93 3.777-3.93 1.094 0 2.238.197 2.238.197v2.475h-1.26c-1.243 0-1.63.775-1.63 1.57v1.884h2.773l-.443 2.909h-2.33V22c4.78-.755 8.438-4.917 8.438-9.939z" />
+    <path d="M12 2C7.589 2 4 5.589 4 9.995 4 15.991 12 22 12 22s8-6.009 8-12.005C20 5.589 16.411 2 12 2zm0 10.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
   </svg>
 );
 
@@ -24,21 +24,15 @@ const IconWhatsApp = () => (
   </svg>
 );
 
-const IconLocation = () => (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
-    <path d="M12 2c-4.42 0-8 3.58-8 8 0 5.5 8 12 8 12s8-6.5 8-12c0-4.42-3.58-8-8-8zm0 10.8a2.8 2.8 0 1 1 0-5.6 2.8 2.8 0 0 1 0 5.6z" />
-  </svg>
-);
+// 👉 Información del negocio
+const WHATSAPP_NUMBER = "593984880468"; // solo números, con código de país, sin '+' ni espacios
+const WHATSAPP_DISPLAY = "+593 98 488 0468"; // como se muestra al usuario
+const MAPS_URL = "https://l.instagram.com/?u=https%3A%2F%2Fmaps.app.goo.gl%2FB4LVAYLxvMuwXsuE9%3Fg_st%3Dic%26utm_source%3Dig%26utm_medium%3Dsocial%26utm_content%3Dlink_in_bio%26fbclid%3DPAZXh0bgNhZW0CMTEAc3J0YwZhcHBfaWQPOTM2NjE5NzQzMzkyNDU5AAGn_oqrYzsBMtPRc2N2aptDbGXg-iG5-VFhRCD6m4VnleH_jHY5zLezUdJza74_aem_B3z_UlltnRGnSSLfWrFf4w&e=AUD8pWkXfdA34eOteUrOjVR1HPRDj6F7-to54sCO4vLiuhm1_Mlp2-GkL3MlI46kCH00PHVdOMrM-W9V32NSvMywrrydKa5uKx-XFxb_vRVGZuWMIZrLC9G1j6ofwMn3GLJ2er0"; // enlace real de Google Maps
 
 const socialLinks = [
-  { href: "https://www.instagram.com/juliana.basics/", label: "Instagram", Icon: IconInstagram },
-  { href: "https://wa.me/593988705890", label: "WhatsApp", Icon: IconWhatsApp },
+  { href: "https://www.instagram.com/vaneseshop/", label: "Instagram", Icon: IconInstagram },
+  { href: `https://wa.me/${WHATSAPP_NUMBER}`, label: "WhatsApp", Icon: IconWhatsApp },
 ];
-
-// 👉 Reemplaza estos 3 valores con la información real del negocio
-const WHATSAPP_NUMBER = "593988705890"; // solo números, con código de país, sin '+' ni espacios
-const WHATSAPP_DISPLAY = "+593 98 870 5890"; // como se muestra al usuario
-const MAPS_URL = "https://l.instagram.com/?u=https%3A%2F%2Fmaps.app.goo.gl%2FB4LVAYLxvMuwXsuE9%3Fg_st%3Dic%26utm_source%3Dig%26utm_medium%3Dsocial%26utm_content%3Dlink_in_bio%26fbclid%3DPAZXh0bgNhZW0CMTEAc3J0YwZhcHBfaWQPOTM2NjE5NzQzMzkyNDU5AAGn_oqrYzsBMtPRc2N2aptDbGXg-iG5-VFhRCD6m4VnleH_jHY5zLezUdJza74_aem_B3z_UlltnRGnSSLfWrFf4w&e=AUD8pWkXfdA34eOteUrOjVR1HPRDj6F7-to54sCO4vLiuhm1_Mlp2-GkL3MlI46kCH00PHVdOMrM-W9V32NSvMywrrydKa5uKx-XFxb_vRVGZuWMIZrLC9G1j6ofwMn3GLJ2er0"; // enlace real de Google Maps
 
 const Footer: React.FC = () => {
   const pathname = usePathname();
@@ -46,11 +40,11 @@ const Footer: React.FC = () => {
 
   const showWhatsAppFloating = pathname && !pathname.startsWith("/admin");
 
+
+
   return (
     <>
       <footer className={styles.pdxFooter}>
-        <div className={styles.ftGlowLeft} />
-        <div className={styles.ftGlowRight} />
 
         {/* Main row */}
         <div className={styles.ftMain}>
@@ -58,15 +52,26 @@ const Footer: React.FC = () => {
 
             {/* Columna 1: Información de la tienda */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left gap-1">
-              <span className="text-base font-bold tracking-wide text-white">
-                Juliana Basics
+              <span className="text-base font-bold" style={{ color: "#8a7556" }}>
+                vaneseshop
               </span>
-              <span className="text-xs text-[var(--textSecondary)]">
-                Moda &amp; Outfits
-              </span>
-              <p className="text-xs text-[var(--textSecondary)] mt-1 max-w-[220px]">
-                Encuentra las últimas tendencias en ropa y accesorios, pensadas para cada estilo.
-              </p>
+
+              <a
+                href="https://www.instagram.com/vaneseshop/"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1"
+                style={{ color: "#8a7556" }}
+                onClick={() => trackLinkClick().catch(console.error)}
+              >
+                <IconInstagram/>
+              </a>
+
+              <div className="text-xs mt-1 max-w-[220px]" style={{ color: "#8a7556" }}>
+                <p>Vanessa Salazar | Artista Visual</p>
+                <p>Piezas con identidad e historia</p>
+                <p>Textil • Pintura • Sombreros de autor</p>
+              </div>
             </div>
 
             {/* Columna 2: Redes sociales */}
@@ -76,7 +81,8 @@ const Footer: React.FC = () => {
                   <li key={label}>
                     <a
                       href={href}
-                      className={styles.ftSocialsLink}
+                      className="flex items-center justify-center w-9 h-9 rounded-full border transition-colors hover:bg-[#FF3D8A] hover:border-[#FF3D8A] hover:text-black"
+                      style={{ borderColor: "rgba(138, 117, 86, 0.3)", color: "#8a7556" }}
                       target="_blank"
                       rel="noreferrer"
                       title={label}
@@ -88,52 +94,57 @@ const Footer: React.FC = () => {
                 ))}
               </ul>
             </div>
-
-            {/* Columna 3: Información de contacto */}
+            {/* Columna 3: Contacto */}
             <div className="flex flex-col items-center md:items-end gap-2.5">
               <a
                 href={`https://wa.me/${WHATSAPP_NUMBER}`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-2 text-xs text-[var(--textSecondary)] hover:text-white transition-colors"
+                className="flex items-center gap-2 text-xl hover:text-[#FF3D8A] transition-colors"
+                style={{ color: "#8a7556" }}
                 onClick={() => trackLinkClick().catch(console.error)}
               >
-                <IconWhatsApp />
                 <span>{WHATSAPP_DISPLAY}</span>
+                <IconWhatsApp />
               </a>
 
               <a
                 href={MAPS_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-2 text-xs text-[var(--textSecondary)] hover:text-white transition-colors"
+                className="flex items-center gap-2 text-sm hover:text-[#FF3D8A] transition-colors"
+                style={{ color: "#8a7556" }}
                 onClick={() => trackLinkClick().catch(console.error)}
               >
                 <IconLocation />
                 <span>ɢʏᴇ - ᴀʟʙᴏʀᴀᴅᴀ 𝟪ᴠᴀ ᴇᴛᴀᴘᴀ</span>
               </a>
+
             </div>
+
           </div>
         </div>
 
         {/* Divider */}
-        <div className={styles.ftDivider} />
+        <div className="h-px bg-white/10" />
 
         {/* Copyright row */}
         <div className={styles.ftCopyRow}>
-          <p className={styles.ftCopyText}>
-            © {new Date().getFullYear()} Juliana Basics 2026. Todos los derechos reservados.
+          <p className="text-xs" style={{ color: "#8a7556" }}>
+            © {new Date().getFullYear()} vaneseshop. Todos los derechos reservados.
           </p>
           <div className={styles.ftCopyRight}>
-            <div className={styles.ftBadge}>
-              <div className={styles.ftBadgeDot} />
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: "#8a7556" }}>
+              <div className="w-1.5 h-1.5 rounded-full bg-[#FF3D8A]" />
               Hecho en Ecuador
             </div>
+
             <a
               href="https://www.instagram.com/hector.cobena/"
               target="_blank"
               rel="noreferrer"
-              className={styles.ftDevLink}
+              className="text-xs hover:text-[#FF3D8A] transition-colors"
+              style={{ color: "#8a7556" }}
               onClick={() => trackLinkClick().catch(console.error)}
             >
               Desarrollado por Héctor Cobeña
@@ -141,8 +152,8 @@ const Footer: React.FC = () => {
           </div>
         </div>
 
-        {showWhatsAppFloating && <WhatsAppFloatingButton />}
       </footer>
+      {showWhatsAppFloating && <WhatsAppFloatingButton />}
     </>
   );
 };
