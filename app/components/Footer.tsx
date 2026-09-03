@@ -24,15 +24,15 @@ const IconWhatsApp = () => (
   </svg>
 );
 
-// 👉 Información del negocio
-const WHATSAPP_NUMBER = "593984880468"; // solo números, con código de país, sin '+' ni espacios
-const WHATSAPP_DISPLAY = "+593 98 488 0468"; // como se muestra al usuario
-const MAPS_URL = "https://l.instagram.com/?u=https%3A%2F%2Fmaps.app.goo.gl%2FB4LVAYLxvMuwXsuE9%3Fg_st%3Dic%26utm_source%3Dig%26utm_medium%3Dsocial%26utm_content%3Dlink_in_bio%26fbclid%3DPAZXh0bgNhZW0CMTEAc3J0YwZhcHBfaWQPOTM2NjE5NzQzMzkyNDU5AAGn_oqrYzsBMtPRc2N2aptDbGXg-iG5-VFhRCD6m4VnleH_jHY5zLezUdJza74_aem_B3z_UlltnRGnSSLfWrFf4w&e=AUD8pWkXfdA34eOteUrOjVR1HPRDj6F7-to54sCO4vLiuhm1_Mlp2-GkL3MlI46kCH00PHVdOMrM-W9V32NSvMywrrydKa5uKx-XFxb_vRVGZuWMIZrLC9G1j6ofwMn3GLJ2er0"; // enlace real de Google Maps
-
 const socialLinks = [
   { href: "https://www.instagram.com/vaneseshop/", label: "Instagram", Icon: IconInstagram },
   { href: `https://wa.me/${WHATSAPP_NUMBER}`, label: "WhatsApp", Icon: IconWhatsApp },
 ];
+
+// 👉 Información del negocio
+const WHATSAPP_NUMBER = "593984880468"; // solo números, con código de país, sin '+' ni espacios
+const WHATSAPP_DISPLAY = "+593 98 488 0468"; // como se muestra al usuario
+const MAPS_URL = "https://l.instagram.com/?u=https%3A%2F%2Fmaps.app.goo.gl%2FB4LVAYLxvMuwXsuE9%3Fg_st%3Dic%26utm_source%3Dig%26utm_medium%3Dsocial%26utm_content%3Dlink_in_bio%26fbclid%3DPAZXh0bgNhZW0CMTEAc3J0YwZhcHBfaWQPOTM2NjE5NzQzMzkyNDU5AAGn_oqrYzsBMtPRc2N2aptDbGXg-iG5-VFhRCD6m4VnleH_jHY5zLezUdJza74_aem_B3z_UlltnRGnSSLfWrFf4w&e=AUD8pWkXfdA34eOteUrOjVR1HPRDj6F7-to54sCO4vLiuhm1_Mlp2-GkL3MlI46kCH00PHVdOMrM-W9V32NSvMywrrydKa5uKx-XFxb_vRVGZuWMIZrLC9G1j6ofwMn3GLJ2er0"; // enlace real de Google Maps
 
 const Footer: React.FC = () => {
   const pathname = usePathname();
@@ -76,23 +76,26 @@ const Footer: React.FC = () => {
 
             {/* Columna 2: Redes sociales */}
             <div className="w-full flex justify-center">
-              <ul className={styles.ftSocials}>
-                {socialLinks.map(({ href, label, Icon }) => (
-                  <li key={label}>
-                    <a
-                      href={href}
-                      className="flex items-center justify-center w-9 h-9 rounded-full border transition-colors hover:bg-[#FF3D8A] hover:border-[#FF3D8A] hover:text-black"
-                      style={{ borderColor: "rgba(138, 117, 86, 0.3)", color: "#8a7556" }}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={label}
-                      onClick={() => trackLinkClick().catch(console.error)}
-                    >
-                      <Icon />
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <div className="w-full max-w-md flex items-center justify-between gap-3">
+                <ul className={styles.ftSocials}>
+                  {socialLinks.map(({ href, label, Icon }) => (
+                    <li key={label}>
+                      <a
+                        href={href}
+                        className="flex items-center justify-center w-9 h-9 rounded-full border transition-colors hover:bg-[#FF3D8A] hover:border-[#FF3D8A] hover:text-black"
+                        style={{ borderColor: "rgba(138, 117, 86, 0.3)", color: "#8a7556" }}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={label}
+                        onClick={() => trackLinkClick().catch(console.error)}
+                      >
+                        <Icon />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+
+              </div>
             </div>
             {/* Columna 3: Contacto */}
             <div className="flex flex-col items-center md:items-end gap-2.5">
@@ -107,18 +110,10 @@ const Footer: React.FC = () => {
                 <span>{WHATSAPP_DISPLAY}</span>
                 <IconWhatsApp />
               </a>
-
-              <a
-                href={MAPS_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 text-sm hover:text-[#FF3D8A] transition-colors"
-                style={{ color: "#8a7556" }}
-                onClick={() => trackLinkClick().catch(console.error)}
-              >
+              <div className="flex items-center gap-1 text-xs" style={{ color: "#8a7556" }}>
                 <IconLocation />
-                <span>ɢʏᴇ - ᴀʟʙᴏʀᴀᴅᴀ 𝟪ᴠᴀ ᴇᴛᴀᴘᴀ</span>
-              </a>
+                <span>ɢʏᴇ - Via a la Costa</span>
+              </div>
 
             </div>
 
