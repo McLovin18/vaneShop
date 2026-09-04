@@ -38,6 +38,13 @@ type Section = LandingSection;
    CONSTANTES
 ============================ */
 
+const AVAILABLE_SECTION_TYPES = [
+  "hero",
+  "featuredCategories",
+  "featuredProducts",
+  "gallery",
+] as const;
+
 
 function getDefaultSection(type: SectionType): Section {
 
@@ -3410,7 +3417,10 @@ export default function LandingEditor() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-900 dark:text-white p-6 rounded w-96">
             <h2 className="font-bold mb-4">Selecciona tipo de secci+�n</h2>
-            {Object.values(sectionSchemas).map((schema) => (
+            {AVAILABLE_SECTION_TYPES.map((type) => {
+              const schema = sectionSchemas[type];
+
+              return (
               <button
                 key={schema.type}
                 onClick={() => handleAddSectionType(schema.type)}
@@ -3418,7 +3428,8 @@ export default function LandingEditor() {
               >
                 {schema.label}
               </button>
-            ))}
+              );
+            })}
             <button
               onClick={closeAddModal}
               className="mt-4 w-full border p-2"

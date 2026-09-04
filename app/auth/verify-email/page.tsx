@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { applyActionCode, getAuth } from "firebase/auth";
 import { Check, AlertCircle, Loader } from "lucide-react";
 
 type VerificationState = "loading" | "success" | "expired" | "error";
@@ -25,6 +24,7 @@ export default function VerifyEmailPage() {
         }
 
         // Aplicar el código de verificación
+        const { applyActionCode, getAuth } = await import("firebase/auth");
         const auth = getAuth();
         await applyActionCode(auth, oobCode);
 
