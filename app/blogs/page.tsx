@@ -44,7 +44,7 @@ export default function BlogsPage() {
       <main className="max-w-6xl mx-auto px-4 py-8 lg:px-6 flex-1">
         <BottomBarPublic/>
         <h1 className="text-4xl font-bold mb-4" style={{ color: "var(--text)" }}>
-          Blog de Juliana Basics
+          Blog de VaneseShop
         </h1>
         <p
           className="mb-12"
