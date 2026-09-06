@@ -9,6 +9,7 @@ const adminItems = [
   { name: "Landing", path: "/admin/edit-landing", icon: "edit" },
   { name: "Blogs", path: "/admin/edit-blogs", icon: "library_books" },
   { name: "Perfil", path: "/admin/perfil", icon: "person" },
+  { name: "Entregas", path: "/admin/zonas-entrega", icon: "local_shipping" },
   { name: "Config", path: "/admin/config", icon: "settings" },
 ];
 

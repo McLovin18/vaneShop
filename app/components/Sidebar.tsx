@@ -10,6 +10,7 @@ const Sidebar = ({ role = "admin" }) => {
     { name: "Editar landing", path: "/admin/edit-landing", icon: "edit" },
     { name: "Editar blogs", path: "/admin/edit-blogs", icon: "library_books" },
     { name: "Perfil", path: "/admin/perfil", icon: "person" },
+    { name: "Zonas de entrega", path: "/admin/zonas-entrega", icon: "local_shipping" },
     { name: "Configuración", path: "/admin/config", icon: "settings" },
   ];
   const items = adminItems;

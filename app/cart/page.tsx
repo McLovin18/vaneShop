@@ -5,6 +5,11 @@ import { getSnapshotPricing } from "../lib/pricing";
 import { useUser } from "../context/UserContext";
 import BottomBarPublic from "../components/BottomBarPublic";
 import { obtenerAtributos } from "../lib/atributos-db";
+import {
+  CiudadEntrega,
+  obtenerCiudadesEntrega,
+  obtenerConfiguracionEntrega,
+} from "../lib/zonas-entrega-db";
 
 function resolveCartItemKey(item: any) {
   if (!item) return "";
@@ -50,6 +55,10 @@ export default function CartPage() {
   const [error, setError] = useState("");
   const { isLogged } = useUser();
   const [atributos, setAtributos] = useState<any[]>([]);
+  const [ciudadesEntrega, setCiudadesEntrega] = useState<CiudadEntrega[]>([]);
+  const [configuracionEntrega, setConfiguracionEntrega] = useState({ montoMinimoGratis: 25 });
+  const [ciudadEntregaId, setCiudadEntregaId] = useState("");
+  const [zonaEntregaId, setZonaEntregaId] = useState("");
 
   const calcularPrecioData = (p: any) => {
     const { basePrice, discount, hasDiscount, fakeOldPrice, finalPrice } = getSnapshotPricing(p);
@@ -63,6 +72,13 @@ export default function CartPage() {
     }
 
     loadAtributos();
+
+    Promise.all([obtenerCiudadesEntrega(), obtenerConfiguracionEntrega()])
+      .then(([cities, config]) => {
+        setCiudadesEntrega(cities);
+        setConfiguracionEntrega(config);
+      })
+      .catch(() => setError("No se pudo cargar la configuración de entregas."));
   }, []);
 
   const subtotal = carrito.reduce((sum, p) => {
@@ -70,7 +86,12 @@ export default function CartPage() {
     return sum + finalPrice * (p.cantidad || 1);
   }, 0);
 
-  const total = subtotal;
+  const ciudadEntrega = ciudadesEntrega.find((city) => city.id === ciudadEntregaId);
+  const zonaEntrega = ciudadEntrega?.zonas?.find((zone) => zone.id === zonaEntregaId);
+  const precioCiudadEntrega = Number(ciudadEntrega?.precio ?? 0);
+  const envioGratis = subtotal >= configuracionEntrega.montoMinimoGratis;
+  const costoEnvio = envioGratis ? 0 : (Number(zonaEntrega?.precio ?? precioCiudadEntrega));
+  const total = subtotal + costoEnvio;
 
   // Arma el texto de la variación seleccionada (talla/color legacy o variaciones dinámicas)
   const getVariationText = (p: any): string => {
@@ -109,10 +130,10 @@ export default function CartPage() {
     const headerMsg = "Hola, Me gustaría realizar una compra:";
     const footerMsg = "Quiero confirmar disponibilidad y conocer más detalles. Gracias!";
 
-    // Para WhatsApp, solo incluir subtotal + envío
-    const totalWhatsApp = subtotal;
+    const deliveryText = `Ciudad de entrega: ${ciudadEntrega?.nombre}\nZona de entrega: ${zonaEntrega?.nombre}\nEnvío: ${envioGratis ? "GRATIS" : `$${costoEnvio.toFixed(2)}`}`;
+    const totalWhatsApp = total;
 
-    const message = `${headerMsg}\n\n${productosText}\n\n--------------------\nTOTAL: $${totalWhatsApp.toFixed(2)}\n--------------------\n\n${footerMsg}`;
+    const message = `${headerMsg}\n\n${productosText}\n\n${deliveryText}\n\n--------------------\nSubtotal: $${subtotal.toFixed(2)}\nTotal: $${totalWhatsApp.toFixed(2)}\n--------------------\n\n${footerMsg}`;
     return encodeURIComponent(message);
   };
 
@@ -121,6 +142,11 @@ export default function CartPage() {
 
     if (carrito.length === 0) {
       setError("El carrito está vacío");
+      return;
+    }
+
+    if (!ciudadEntrega || !zonaEntrega) {
+      setError("Selecciona una ciudad y una zona de entrega para continuar.");
       return;
     }
 
@@ -324,6 +350,10 @@ export default function CartPage() {
                         </span>
                         <span>${subtotal.toFixed(2)}</span>
                       </div>
+                      <div className="flex justify-between text-sm text-[var(--textSecondary)]">
+                        <span>Envío</span>
+                        <span className={envioGratis ? "font-semibold text-emerald-600" : ""}>{envioGratis ? "Gratis" : `$${costoEnvio.toFixed(2)}`}</span>
+                      </div>
 
                     </div>
                     <div className="border-t border-[var(--border)] mt-3 pt-3 flex justify-between font-bold text-base">
@@ -332,10 +362,27 @@ export default function CartPage() {
                     </div>
                   </div>
 
-                  <div>
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--muted)] p-3">
+                      <p className="mb-2 text-sm font-bold text-[var(--text)]">¿Dónde quieres recibir tu pedido?</p>
+                      <select value={ciudadEntregaId} onChange={(event) => { setCiudadEntregaId(event.target.value); setZonaEntregaId(""); }} className="mb-2 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--text)]">
+                        <option value="">Selecciona una ciudad</option>
+                        {ciudadesEntrega.map((city) => <option key={city.id} value={city.id}>{city.nombre}</option>)}
+                      </select>
+                      <select value={zonaEntregaId} onChange={(event) => setZonaEntregaId(event.target.value)} disabled={!ciudadEntrega} className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="">Selecciona una zona</option>
+                        {ciudadEntrega?.zonas?.map((zone) => {
+                          const precioZona = zone.precio == null ? null : Number(zone.precio);
+                          return <option key={zone.id} value={zone.id}>{zone.nombre} · {precioZona == null ? `precio ciudad ($${precioCiudadEntrega.toFixed(2)})` : `$${precioZona.toFixed(2)}`}</option>;
+                        })}
+                      </select>
+                      {ciudadEntrega && (ciudadEntrega.zonas || []).length === 0 && <p className="mt-2 text-xs text-[var(--textSecondary)]">Esta ciudad todavía no tiene zonas configuradas.</p>}
+                      {ciudadEntrega && zonaEntrega && <p className="mt-2 text-xs font-semibold text-[var(--textSecondary)]">{envioGratis ? "Tu envío será gratis por alcanzar el mínimo." : `Costo de entrega: $${costoEnvio.toFixed(2)}`}</p>}
+                    </div>
                     <button
                       onClick={handleGenerarOrden}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 px-6 bg-[var(--primary)] hover:bg-[var(--primaryHover)] text-[var(--primaryForeground)] font-extrabold text-sm rounded-xl transition-colors shadow-md"
+                      disabled={!ciudadEntrega || !zonaEntrega}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 px-6 bg-[var(--primary)] hover:bg-[var(--primaryHover)] text-[var(--primaryForeground)] font-extrabold text-sm rounded-xl transition-colors shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                       title="Enviar pedido por WhatsApp"
                     >
                       <span className="material-icons-round text-base">chat</span>

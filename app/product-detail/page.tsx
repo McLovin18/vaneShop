@@ -370,7 +370,7 @@ export default function ProductDetailPage({ params }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col mt-2 bg-[var(--bg)] text-[var(--text)] transition-colors">
+    <div className="public-product-page min-h-screen flex flex-col mt-2 bg-[var(--bg)] text-[var(--text)] transition-colors">
       <BottomBarPublic/>
 
       <div className="max-w-5xl mx-auto w-full px-3 sm:px-6 py-6 sm:py-10">

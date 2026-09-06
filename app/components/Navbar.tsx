@@ -19,14 +19,14 @@ import { isWebViewOrLowPerformance } from "../lib/webview-detect";
 // Paleta de marca — Tienda Virtual
 // ─────────────────────────────────────────────
 const BRAND = {
-  bg: "var(--primary)",
+  bg: "#5d4030",
   bgSoft: "var(--bgSecondary)",
   gold: "var(--secondary)",
   goldBright: "var(--secondaryHover)",
   border: "var(--border)",
   borderSoft: "color-mix(in srgb, var(--border) 70%, transparent)",
-  white: "#8a7556",
-  textMuted: "color-mix(in srgb, #8a7556 80%, transparent)",
+  white: "#f7ede3",
+  textMuted: "color-mix(in srgb, #f7ede3 76%, transparent)",
 };
 
 // ─────────────────────────────────────────────

@@ -12,8 +12,8 @@
      ============================================================ */
 
   /* --- Colores base de la paleta (para uso directo si se necesita) --- */
-  --color-tobacco: #b59e7d;
-  --color-mahogany: #eedbca;
+  --color-tobacco: #6b4a35;
+  --color-mahogany: #3a2418;
   --color-vanilla: #faf1ee;
   --color-mountain: #aaa396;
   --color-sand: #cec1a8;
@@ -25,7 +25,7 @@
 
   /* --- Semántica --- */
   --background: var(--color-vanilla);
-  --foreground: var(--color-tobacco);
+  --foreground: var(--color-mahogany);
 
   --bg: var(--color-vanilla);
   --bgSecondary: var(--color-sand);
@@ -200,6 +200,21 @@ img, .pc-card, button, a {
 body {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
+}
+
+/* Contraste de lectura para el contenido público del detalle de producto. */
+.public-product-page .text-slate-800,
+.public-product-page .text-slate-700,
+.public-product-page .text-slate-600,
+.public-product-page .text-black,
+.public-product-page [class~="text-black/80"],
+.public-product-page [class~="text-black/75"] {
+  color: var(--text) !important;
+}
+
+.public-product-page .text-slate-500,
+.public-product-page .text-slate-400 {
+  color: var(--textSecondary) !important;
 }
 
 /* Reducir animaciones en dispositivos con preferencia de movimiento reducido */

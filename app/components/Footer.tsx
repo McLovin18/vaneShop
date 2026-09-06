@@ -12,6 +12,18 @@ const IconInstagram = () => (
   </svg>
 );
 
+const IconFacebook = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+    <path d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.6 1.7-1.6h1.8V3.8c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.1V10H8v3h2.6v8h2.9z" />
+  </svg>
+);
+
+const IconTikTok = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+    <path d="M15.6 3c.3 1.7 1.3 2.8 3 3v2.8a7.3 7.3 0 0 1-3-.8v6.2a5.2 5.2 0 1 1-4.5-5.1v2.9a2.4 2.4 0 1 0 1.7 2.2V3h2.8z" />
+  </svg>
+);
+
 const IconLocation = () => (
   <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
     <path d="M12 2C7.589 2 4 5.589 4 9.995 4 15.991 12 22 12 22s8-6.009 8-12.005C20 5.589 16.411 2 12 2zm0 10.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
@@ -30,8 +42,9 @@ const WHATSAPP_DISPLAY = "+593 98 488 0468"; // como se muestra al usuario
 const MAPS_URL = "https://l.instagram.com/?u=https%3A%2F%2Fmaps.app.goo.gl%2FB4LVAYLxvMuwXsuE9%3Fg_st%3Dic%26utm_source%3Dig%26utm_medium%3Dsocial%26utm_content%3Dlink_in_bio%26fbclid%3DPAZXh0bgNhZW0CMTEAc3J0YwZhcHBfaWQPOTM2NjE5NzQzMzkyNDU5AAGn_oqrYzsBMtPRc2N2aptDbGXg-iG5-VFhRCD6m4VnleH_jHY5zLezUdJza74_aem_B3z_UlltnRGnSSLfWrFf4w&e=AUD8pWkXfdA34eOteUrOjVR1HPRDj6F7-to54sCO4vLiuhm1_Mlp2-GkL3MlI46kCH00PHVdOMrM-W9V32NSvMywrrydKa5uKx-XFxb_vRVGZuWMIZrLC9G1j6ofwMn3GLJ2er0"; // enlace real de Google Maps
 
 const socialLinks = [
+  { href: "https://www.facebook.com/vaneseshop/", label: "Facebook", Icon: IconFacebook },
   { href: "https://www.instagram.com/vaneseshop/", label: "Instagram", Icon: IconInstagram },
-  { href: `https://wa.me/${WHATSAPP_NUMBER}`, label: "WhatsApp", Icon: IconWhatsApp },
+  { href: "https://www.tiktok.com/@vaneseshop", label: "TikTok", Icon: IconTikTok },
 ];
 
 const Footer: React.FC = () => {
@@ -76,7 +89,7 @@ const Footer: React.FC = () => {
 
             {/* Columna 2: Redes sociales */}
             <div className="w-full flex justify-center">
-              <div className="w-full max-w-md flex items-center justify-between gap-3">
+              <div className="w-full flex items-center justify-center gap-3">
                 <ul className={styles.ftSocials}>
                   {socialLinks.map(({ href, label, Icon }) => (
                     <li key={label}>

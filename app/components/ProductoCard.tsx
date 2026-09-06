@@ -157,10 +157,10 @@ const cardStyles = `
     transform: scale(1);
   }
 
-  /* ── barra info inferior — estilo imagen: negro total ── */
+  /* ── información del producto ── */
   .pc-info {
-    background: var(--primary);
-    color: var(--primaryForeground);
+    background: var(--card);
+    color: var(--cardForeground);
     padding: 10px 12px 12px;
     display: flex;
     flex-direction: column;
@@ -181,7 +181,7 @@ const cardStyles = `
     font-weight: 600;
     font-size: 13px;
     line-height: 1.3;
-    color: #ffffff;
+    color: var(--cardForeground);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -189,7 +189,7 @@ const cardStyles = `
     text-decoration: underline;
     text-underline-offset: 2px;
     text-decoration-thickness: 1px;
-    text-decoration-color: rgba(255,255,255,0.35);
+    text-decoration-color: color-mix(in srgb, var(--cardForeground) 35%, transparent);
     min-height: 2.6em;
     max-height: 2.6em;
     align-items: flex-start;
@@ -216,7 +216,7 @@ const cardStyles = `
     font-family: 'Barlow', sans-serif;
     font-weight: 700;
     font-size: 13px;
-    color: #ffffff;
+    color: var(--cardForeground);
     letter-spacing: 0.02em;
   }
 
@@ -230,7 +230,7 @@ const cardStyles = `
     font-family: 'Barlow', sans-serif;
     font-weight: 400;
     font-size: 11px;
-    color: rgba(255,255,255,0.35);
+    color: color-mix(in srgb, var(--cardForeground) 55%, transparent);
     text-decoration: line-through;
   }
 
@@ -254,9 +254,9 @@ const cardStyles = `
     justify-content: center;
     gap: 5px;
     height: 30px;
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid color-mix(in srgb, var(--cardForeground) 25%, transparent);
     background: transparent;
-    color: #fff;
+    color: var(--cardForeground);
     font-family: 'Barlow', sans-serif;
     font-size: 10px;
     font-weight: 600;
@@ -268,8 +268,8 @@ const cardStyles = `
   }
 
   .pc-btn-cart:hover:not(:disabled) {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.5);
+    background: color-mix(in srgb, var(--cardForeground) 8%, transparent);
+    border-color: color-mix(in srgb, var(--cardForeground) 50%, transparent);
   }
 
   .pc-btn-cart:disabled {
@@ -289,17 +289,17 @@ const cardStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid color-mix(in srgb, var(--cardForeground) 25%, transparent);
     background: transparent;
-    color: #fff;
+    color: var(--cardForeground);
     border-radius: 2px;
     cursor: pointer;
     transition: background 0.2s, border-color 0.2s;
   }
 
   .pc-btn-eye:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.5);
+    background: color-mix(in srgb, var(--cardForeground) 8%, transparent);
+    border-color: color-mix(in srgb, var(--cardForeground) 50%, transparent);
   }
 `;
 

@@ -246,6 +246,8 @@ a.ftContactVal:hover {
 
 .ftSocials {
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 10px;
   list-style: none;
   padding: 0;

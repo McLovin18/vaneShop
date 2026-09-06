@@ -46,6 +46,16 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    match /configuracion/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /ciudadesEntrega/{cityId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     
     match /landingPage/{document=**} {
       allow read: if true;
