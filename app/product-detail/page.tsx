@@ -38,6 +38,8 @@ export default function ProductDetailPage({ params }) {
   const [atributos, setAtributos] = useState<Record<string, string>>({}); // Mapeo de ID -> nombre
   const [personalizacionValues, setPersonalizacionValues] = useState<Record<string, string>>({});
   const [variacionPersonalizada, setVariacionPersonalizada] = useState("");
+  const [shouldScrollToImage, setShouldScrollToImage] = useState(false);
+  const imageRef = React.useRef<HTMLDivElement>(null);
 
   const {
     isLogged, user, isAdmin,
@@ -102,10 +104,39 @@ export default function ProductDetailPage({ params }) {
       const attrs = variant.attributes || {};
       return variationAttributeIds.every((attrId: string) => attrs[attrId] === selectedVariations[attrId]);
     });
+    
+    // Verificar si todas las variaciones están seleccionadas
+    const allSelected = variationAttributeIds.every((attrId: string) => selectedVariations[attrId]);
+    
     if (typeof selectedVariant?.imagenIndex === "number" && producto.imagenes[selectedVariant.imagenIndex]) {
+      const oldImgIdx = imgIdx;
       setImgIdx(selectedVariant.imagenIndex);
+      
+      // Si se completó la selección y la imagen cambió, hacer scroll hacia la imagen
+      if (allSelected && oldImgIdx !== selectedVariant.imagenIndex) {
+        setShouldScrollToImage(true);
+      }
     }
-  }, [producto, selectedVariations]);
+  }, [producto, selectedVariations, imgIdx]);
+
+  // Scroll suave hacia la imagen cuando se completa la selección
+  useEffect(() => {
+    if (shouldScrollToImage && imageRef.current) {
+      // Detectar si es móvil para hacer scroll
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        const offset = -80; // Offset negativo para ir más arriba
+        const elementPosition = imageRef.current.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset + offset;
+        
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+      setShouldScrollToImage(false);
+    }
+  }, [shouldScrollToImage]);
 
 
 
@@ -406,7 +437,7 @@ export default function ProductDetailPage({ params }) {
           <div className={`w-full ${imageContainerWidthClass} flex flex-col gap-3`}>
 
             {/* Imagen principal */}
-            <div className="relative aspect-square rounded-2xl overflow-hidden bg-[var(--card)] border border-[var(--border)]">
+            <div ref={imageRef} className="relative aspect-square rounded-2xl overflow-hidden bg-[var(--card)] border border-[var(--border)]">
               {hasDiscount && (
                 <span className="absolute top-3 left-3 z-10 bg-[var(--secondary)] text-[var(--secondaryForeground)] text-xs font-bold px-2 py-0.5 rounded-full">
                   -{discount}%
