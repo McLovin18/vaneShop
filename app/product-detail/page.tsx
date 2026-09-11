@@ -644,11 +644,12 @@ export default function ProductDetailPage({ params }) {
             )}
 
             {permitePersonalizacionDeVariacion && (
-              <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--bgSecondary)" }}>
-                <label className="block text-sm font-semibold" style={{ color: "var(--text)" }}>
+              <div className="rounded-xl border-2 border-[var(--primary)]/20 bg-gradient-to-br from-[var(--primary)]/5 to-[var(--primaryHover)]/5 p-4 shadow-sm">
+                <label className="block text-sm font-bold text-[var(--primary)] flex items-center gap-2">
+                  <span className="material-icons-round text-lg">edit</span>
                   {textoPersonalizacionDeVariacion}
                 </label>
-                <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
+                <p className="mt-1 text-xs text-[var(--textSecondary)]">
                   Completa este campo para esta variante.
                 </p>
                 <input
@@ -657,17 +658,16 @@ export default function ProductDetailPage({ params }) {
                   onChange={(e) => setVariacionPersonalizada(e.target.value)}
                   placeholder={textoPersonalizacionDeVariacion}
                   maxLength={80}
-                  className="mt-3 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
-                  style={{ borderColor: "var(--border)", background: "var(--background)", color: "var(--text)" }}
+                  className="mt-3 w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
                 />
               </div>
             )}
 
             {/* Campos de personalización */}
             {(producto as any)?.personalizado && (producto as any)?.camposPersonalizacion && (producto as any).camposPersonalizacion.length > 0 && (
-              <div className="mt-6 rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--bgSecondary)" }}>
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "#92400e" }}>
-                  <span className="material-icons-round text-base">auto_awesome</span>
+              <div className="mt-6 rounded-xl border-2 border-[var(--primary)]/20 bg-gradient-to-br from-[var(--primary)]/5 to-[var(--primaryHover)]/5 p-4 shadow-sm">
+                <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-[var(--primary)]">
+                  <span className="material-icons-round text-lg">auto_awesome</span>
                   Personalización
                 </h3>
                 <div className="space-y-3">
@@ -691,16 +691,14 @@ export default function ProductDetailPage({ params }) {
                           value={personalizacionValues[campo.id] || ""}
                           onChange={(e) => setPersonalizacionValues(prev => ({ ...prev, [campo.id]: e.target.value }))}
                           placeholder={`Ingresa ${campo.nombre.toLowerCase()}`}
-                          className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
-                          style={{ borderColor: "var(--border)", background: "var(--background)", color: "var(--text)" }}
+                          className="w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
                         />
                       ) : campo.tipo === "fecha" ? (
                         <input
                           type="date"
                           value={personalizacionValues[campo.id] || ""}
                           onChange={(e) => setPersonalizacionValues(prev => ({ ...prev, [campo.id]: e.target.value }))}
-                          className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
-                          style={{ borderColor: "var(--border)", background: "var(--background)", color: "var(--text)" }}
+                          className="w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
                         />
                       ) : null}
                     </div>
@@ -712,20 +710,23 @@ export default function ProductDetailPage({ params }) {
             {/* Cantidad */}
             {maxCantidad > 0 && (
               <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-400 dark:text-white/30 font-medium">Cantidad:</span>
-                <div className="flex items-center bg-[var(--bgSecondary)] rounded-xl p-1 gap-1">
+                <span className="text-xs font-medium text-[var(--primary)]">Cantidad:</span>
+                <div className="flex items-center bg-gradient-to-r from-[var(--primary)] to-[var(--primaryHover)] rounded-xl p-1 gap-1 shadow-sm">
                   <button
                     onClick={() => setCantidad((v) => Math.max(1, v - 1))}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-white/60 hover:bg-white dark:hover:bg-white/10 font-bold text-lg transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white hover:bg-white/20 font-bold text-lg transition-colors"
                   >−</button>
-                  <span className="w-9 text-center text-sm font-semibold text-slate-800 dark:text-white">
+                  <span className="w-9 text-center text-sm font-bold text-white">
                     {cantidad}
                   </span>
                   <button
                     onClick={() => setCantidad((v) => Math.min(maxCantidad, v + 1))}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-white/60 hover:bg-white dark:hover:bg-white/10 font-bold text-lg transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white hover:bg-white/20 font-bold text-lg transition-colors"
                   >+</button>
                 </div>
+                <span className="text-xs font-medium text-[var(--primary)] bg-[var(--primary)]/10 px-2 py-1 rounded-full">
+                  {maxCantidad} disponibles
+                </span>
               </div>
             )}
 
