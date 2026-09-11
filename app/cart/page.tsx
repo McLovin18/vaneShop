@@ -140,7 +140,7 @@ export default function CartPage() {
     const headerMsg = "Hola, Me gustaría realizar una compra:";
     const footerMsg = "Quiero confirmar disponibilidad y conocer más detalles. Gracias!";
 
-    const deliveryText = `Ciudad de entrega: ${ciudadEntrega?.nombre}\nZona de entrega: ${zonaEntrega?.nombre}\nEnvío: ${envioGratis && cobroFijoZona !== undefined ? `$${cobroFijoZona.toFixed(2)} (tarifa especial)` : envioGratis ? "GRATIS" : `$${costoEnvio.toFixed(2)}`} (Mínimo para envío gratis: $${montoMinimoGratisCiudad.toFixed(2)})`;
+    const deliveryText = `Ciudad de entrega: ${ciudadEntrega?.nombre}\nZona de entrega: ${zonaEntrega?.nombre}\nEnvío: ${envioGratis ? "GRATIS" : `$${costoEnvio.toFixed(2)}`}`;
     const totalWhatsApp = total;
 
     const message = `${headerMsg}\n\n${productosText}\n\n${deliveryText}\n\n--------------------\nSubtotal: $${subtotal.toFixed(2)}\nTotal: $${totalWhatsApp.toFixed(2)}\n--------------------\n\n${footerMsg}`;
