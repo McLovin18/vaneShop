@@ -649,9 +649,6 @@ export default function ProductDetailPage({ params }) {
                   <span className="material-icons-round text-lg">edit</span>
                   {textoPersonalizacionDeVariacion}
                 </label>
-                <p className="mt-1 text-xs text-[var(--textSecondary)]">
-                  Completa este campo para esta variante.
-                </p>
                 <input
                   type="text"
                   value={variacionPersonalizada}
