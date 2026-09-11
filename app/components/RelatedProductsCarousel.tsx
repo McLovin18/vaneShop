@@ -30,7 +30,7 @@ export default function RelatedProductsCarousel({
       if (typeof window === "undefined") return;
       const width = window.innerWidth;
       if (width < 640) setItemsPerView(1);
-      else if (width < 1024) setItemsPerView(3);
+      else if (width < 1024) setItemsPerView(2);
       else setItemsPerView(4);
     };
     updateItemsPerView();
@@ -109,7 +109,7 @@ export default function RelatedProductsCarousel({
       {productosLimitados.length > 0 ? (
         <div
           ref={containerRef}
-          className={`relative overflow-visible ${hasCarousel ? "w-full px-10 sm:px-6 md:px-12" : "w-auto"}`}
+          className={`relative overflow-hidden ${hasCarousel ? "w-full px-10 sm:px-6 md:px-12" : "w-auto"}`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
@@ -145,9 +145,10 @@ export default function RelatedProductsCarousel({
           <div
             className="grid place-items-center justify-center md:justify-start"
             style={{
-              gridTemplateColumns: `repeat(${effectiveItemsPerView}, ${effectiveItemsPerView === 1 ? "340px" : "280px"})`,
-              width: effectiveItemsPerView === 1 ? "100%" : "fit-content",
-              gap: hasCarousel ? "0.25rem" : "0.25rem",
+              gridTemplateColumns: `repeat(${effectiveItemsPerView}, minmax(0, 1fr))`,
+              width: "100%",
+              maxWidth: "1200px",
+              gap: hasCarousel ? "0.5rem" : "0.5rem",
               animation: isAnimating
                 ? `slideIn${animDir === "right" ? "Right" : "Left"} 0.28s ease`
                 : undefined,
@@ -160,8 +161,9 @@ export default function RelatedProductsCarousel({
                 key={`${prod.id}-${currentIndex}-${idx}`}
                 className="transition-all duration-300 flex flex-col items-stretch justify-stretch"
                 style={{ 
-                  width: effectiveItemsPerView === 1 ? "340px" : "280px",
-                  minWidth: 0
+                  width: "100%",
+                  minWidth: 0,
+                  maxWidth: effectiveItemsPerView === 1 ? "340px" : "280px"
                 }}
               >
                 <ProductoCard producto={prod} />
