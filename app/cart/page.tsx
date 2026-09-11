@@ -301,24 +301,24 @@ export default function CartPage() {
                         </div>
 
                         <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-                          <div className="flex items-center gap-1 bg-[var(--muted)] rounded-lg p-0.5">
+                          <div className="flex items-center gap-1 bg-gradient-to-r from-[var(--primary)] to-[var(--primaryHover)] rounded-lg p-0.5 shadow-sm">
                             <button
                               onClick={() => handleCantidad(itemKey, (p.cantidad || 1) - 1)}
-                              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--card)] transition-colors text-[var(--text)] font-bold text-base"
+                              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/20 transition-colors text-white font-bold text-base"
                             >
                               -
                             </button>
-                            <span className="w-7 text-center text-sm font-semibold text-[var(--text)]">
+                            <span className="w-7 text-center text-sm font-bold text-white">
                               {p.cantidad || 1}
                             </span>
                             <button
                               onClick={() => handleCantidad(itemKey, (p.cantidad || 1) + 1)}
-                              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--card)] transition-colors text-[var(--text)] font-bold text-base"
+                              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/20 transition-colors text-white font-bold text-base"
                             >
                               +
                             </button>
                           </div>
-                          <span className="text-xs text-[var(--textSecondary)]">
+                          <span className="text-xs font-medium text-[var(--primary)] bg-[var(--primary)]/10 px-2 py-1 rounded-full">
                             {availableStock} en stock
                           </span>
                         </div>
@@ -373,28 +373,31 @@ export default function CartPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="rounded-xl border border-[var(--border)] bg-[var(--muted)] p-3">
-                      <p className="mb-2 text-sm font-bold text-[var(--text)]">¿Dónde quieres recibir tu pedido?</p>
-                      <select value={ciudadEntregaId} onChange={(event) => { setCiudadEntregaId(event.target.value); setZonaEntregaId(""); }} className="mb-2 w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--text)]">
+                    <div className="rounded-xl border-2 border-[var(--primary)]/20 bg-gradient-to-br from-[var(--primary)]/5 to-[var(--primaryHover)]/5 p-4 shadow-sm">
+                      <p className="mb-3 text-sm font-bold text-[var(--primary)] flex items-center gap-2">
+                        <span className="material-icons-round text-lg">location_on</span>
+                        ¿Dónde quieres recibir tu pedido?
+                      </p>
+                      <select value={ciudadEntregaId} onChange={(event) => { setCiudadEntregaId(event.target.value); setZonaEntregaId(""); }} className="mb-3 w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all">
                         <option value="">Selecciona una ciudad</option>
                         {ciudadesEntrega.map((city) => <option key={city.id} value={city.id}>{city.nombre}</option>)}
                       </select>
-                      <select value={zonaEntregaId} onChange={(event) => setZonaEntregaId(event.target.value)} disabled={!ciudadEntrega} className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-50">
+                      <select value={zonaEntregaId} onChange={(event) => setZonaEntregaId(event.target.value)} disabled={!ciudadEntrega} className="w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all disabled:cursor-not-allowed disabled:opacity-50">
                         <option value="">Selecciona una zona</option>
                         {ciudadEntrega?.zonas?.map((zone) => {
                           return <option key={zone.id} value={zone.id}>{zone.nombre}</option>;
                         })}
                       </select>
                       {ciudadEntrega && (ciudadEntrega.zonas || []).length === 0 && <p className="mt-2 text-xs text-[var(--textSecondary)]">Esta ciudad todavía no tiene zonas configuradas.</p>}
-                      {ciudadEntrega && zonaEntrega && <p className="mt-2 text-xs font-semibold text-[var(--textSecondary)]">{envioGratis && cobroFijoZona !== undefined ? `Envío con tarifa especial: $${cobroFijoZona.toFixed(2)} (por alcanzar el mínimo)` : envioGratis ? "Tu envío será gratis por alcanzar el mínimo." : `Costo de entrega: $${costoEnvio.toFixed(2)} (Mínimo para envío gratis: $${montoMinimoGratisCiudad.toFixed(2)})`}</p>}
+                      {ciudadEntrega && zonaEntrega && <p className="mt-3 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/10 px-3 py-2 rounded-lg border border-[var(--primary)]/20">{envioGratis && cobroFijoZona !== undefined ? `Envío con tarifa especial: $${cobroFijoZona.toFixed(2)} (por alcanzar el mínimo)` : envioGratis ? "Tu envío será gratis por alcanzar el mínimo." : `Costo de entrega: $${costoEnvio.toFixed(2)} (Mínimo para envío gratis: $${montoMinimoGratisCiudad.toFixed(2)})`}</p>}
                     </div>
                     <button
                       onClick={handleGenerarOrden}
                       disabled={!ciudadEntrega || !zonaEntrega}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 px-6 bg-[var(--primary)] hover:bg-[var(--primaryHover)] text-[var(--primaryForeground)] font-extrabold text-sm rounded-xl transition-colors shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-[var(--primary)] to-[var(--primaryHover)] hover:from-[var(--primaryHover)] hover:to-[var(--primary)] text-white font-extrabold text-sm rounded-xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-md transform hover:scale-[1.02] active:scale-[0.98]"
                       title="Enviar pedido por WhatsApp"
                     >
-                      <span className="material-icons-round text-base">chat</span>
+                      <span className="material-icons-round text-lg">chat</span>
                       Pedir por WhatsApp
                     </button>
                   </div>
