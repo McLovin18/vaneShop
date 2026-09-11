@@ -523,6 +523,9 @@ export default function ProductoForm({ initialData = null, onSave, onCancel }: P
         return {
           cantidad: previous?.cantidad ?? 0,
           precio: previous?.precio,
+          permitePersonalizacion: previous?.permitePersonalizacion ?? false,
+          textoPersonalizacion: previous?.textoPersonalizacion ?? "",
+          imagenIndex: previous?.imagenIndex,
           label: getVariantLabel(attributes),
           attributes,
           variantKey: key,
@@ -545,6 +548,32 @@ export default function ProductoForm({ initialData = null, onSave, onCancel }: P
       }
       const parsed = Number(precioVariant);
       return Number.isFinite(parsed) ? { ...variant, precio: parsed } : variant;
+    }));
+  }
+
+  function updateVariantPersonalizacion(index: number, permitePersonalizacion: boolean) {
+    setStockVariants((current) => current.map((variant, variantIndex) => (
+      variantIndex === index
+        ? { ...variant, permitePersonalizacion, textoPersonalizacion: permitePersonalizacion ? (variant.textoPersonalizacion || "") : "" }
+        : variant
+    )));
+  }
+
+  function updateVariantTextoPersonalizacion(index: number, textoPersonalizacion: string) {
+    setStockVariants((current) => current.map((variant, variantIndex) => (
+      variantIndex === index ? { ...variant, textoPersonalizacion } : variant
+    )));
+  }
+
+  function updateVariantImagen(index: number, imagenIndex: string) {
+    setStockVariants((current) => current.map((variant, variantIndex) => {
+      if (variantIndex !== index) return variant;
+      if (imagenIndex === "") {
+        const copy = { ...variant };
+        delete copy.imagenIndex;
+        return copy;
+      }
+      return { ...variant, imagenIndex: Number(imagenIndex) };
     }));
   }
 
@@ -1070,15 +1099,17 @@ export default function ProductoForm({ initialData = null, onSave, onCancel }: P
               {stockVariants.length > 0 && (
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <div className="border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">Variaciones generadas</div>
-                  <div className="grid items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:grid-cols-[minmax(0,1.8fr)_90px_90px_52px]">
+                  <div className="grid items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:grid-cols-[minmax(0,1.45fr)_80px_80px_150px_170px_52px]">
                     <div>Variación</div>
                     <div>Stock</div>
                     <div>Precio</div>
+                    <div>Personalizada</div>
+                    <div>Imagen</div>
                     <div className="md:justify-self-end">Acción</div>
                   </div>
                   <div className="divide-y divide-slate-200">
                     {stockVariants.map((variant, idx) => (
-                      <div key={`${variant.label || idx}-${idx}`} className="grid items-center gap-2 px-3 py-2 md:grid-cols-[minmax(0,1.8fr)_90px_90px_52px]">
+                      <div key={`${variant.label || idx}-${idx}`} className="grid items-center gap-2 px-3 py-2 md:grid-cols-[minmax(0,1.45fr)_80px_80px_150px_170px_52px]">
                         <div className="min-w-0">
                           <div className="truncate text-sm font-medium leading-none text-slate-900">{variant.label || `Variación ${idx + 1}`}</div>
                           <div className="truncate text-[10px] leading-none text-slate-500">{variant.attributes ? Object.entries(variant.attributes).map(([attrId, value]) => {
@@ -1109,6 +1140,51 @@ export default function ProductoForm({ initialData = null, onSave, onCancel }: P
                             onChange={(e) => updateVariantPrecio(idx, e.target.value)}
                             placeholder="Opcional"
                           />
+                        </label>
+
+                        <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-600">
+                          <span className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(variant.permitePersonalizacion)}
+                              onChange={(e) => updateVariantPersonalizacion(idx, e.target.checked)}
+                              className="h-4 w-4 rounded border-slate-300"
+                            />
+                            <span>Personalizada</span>
+                          </span>
+                          {variant.permitePersonalizacion && (
+                            <input
+                              type="text"
+                              value={variant.textoPersonalizacion || ""}
+                              onChange={(e) => updateVariantTextoPersonalizacion(idx, e.target.value)}
+                              placeholder="Texto para el cliente"
+                              className="h-8 w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs"
+                              aria-label="Texto del campo personalizado"
+                            />
+                          )}
+                        </label>
+
+                        <label className="flex min-w-0 items-center gap-2">
+                          <select
+                            value={variant.imagenIndex ?? ""}
+                            onChange={(e) => updateVariantImagen(idx, e.target.value)}
+                            className="h-8 min-w-0 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs text-slate-700"
+                            aria-label="Imagen de la variante"
+                          >
+                            <option value="">Sin imagen</option>
+                            {imagenes.map((imagen, imagenIndex) => (
+                              <option key={imagenIndex} value={imagenIndex}>
+                                Imagen {imagenIndex + 1}
+                              </option>
+                            ))}
+                          </select>
+                          {variant.imagenIndex !== undefined && imagenes[variant.imagenIndex] && (
+                            <img
+                              src={getPreviewUrl(imagenes[variant.imagenIndex])}
+                              alt=""
+                              className="h-8 w-8 shrink-0 rounded object-cover"
+                            />
+                          )}
                         </label>
 
                         <button

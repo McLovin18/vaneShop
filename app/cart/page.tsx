@@ -8,7 +8,6 @@ import { obtenerAtributos } from "../lib/atributos-db";
 import {
   CiudadEntrega,
   obtenerCiudadesEntrega,
-  obtenerConfiguracionEntrega,
 } from "../lib/zonas-entrega-db";
 
 function resolveCartItemKey(item: any) {
@@ -56,7 +55,6 @@ export default function CartPage() {
   const { isLogged } = useUser();
   const [atributos, setAtributos] = useState<any[]>([]);
   const [ciudadesEntrega, setCiudadesEntrega] = useState<CiudadEntrega[]>([]);
-  const [configuracionEntrega, setConfiguracionEntrega] = useState({ montoMinimoGratis: 25 });
   const [ciudadEntregaId, setCiudadEntregaId] = useState("");
   const [zonaEntregaId, setZonaEntregaId] = useState("");
 
@@ -73,10 +71,9 @@ export default function CartPage() {
 
     loadAtributos();
 
-    Promise.all([obtenerCiudadesEntrega(), obtenerConfiguracionEntrega()])
-      .then(([cities, config]) => {
+    obtenerCiudadesEntrega()
+      .then((cities) => {
         setCiudadesEntrega(cities);
-        setConfiguracionEntrega(config);
       })
       .catch(() => setError("No se pudo cargar la configuración de entregas."));
   }, []);
@@ -89,8 +86,21 @@ export default function CartPage() {
   const ciudadEntrega = ciudadesEntrega.find((city) => city.id === ciudadEntregaId);
   const zonaEntrega = ciudadEntrega?.zonas?.find((zone) => zone.id === zonaEntregaId);
   const precioCiudadEntrega = Number(ciudadEntrega?.precio ?? 0);
-  const envioGratis = subtotal >= configuracionEntrega.montoMinimoGratis;
-  const costoEnvio = envioGratis ? 0 : (Number(zonaEntrega?.precio ?? precioCiudadEntrega));
+  const montoMinimoGratisCiudad = Number(ciudadEntrega?.montoMinimoGratis ?? 25);
+  const envioGratis = subtotal >= montoMinimoGratisCiudad;
+  const cobroFijoZona = zonaEntrega?.cobroFijo !== undefined ? Number(zonaEntrega.cobroFijo) : undefined;
+  
+  let costoEnvio: number;
+  if (envioGratis && cobroFijoZona !== undefined) {
+    // Si pasa el mínimo y la zona tiene cobro fijo, se cobra el cobro fijo
+    costoEnvio = cobroFijoZona;
+  } else if (envioGratis) {
+    // Si pasa el mínimo y no hay cobro fijo, envío gratis
+    costoEnvio = 0;
+  } else {
+    // Si no pasa el mínimo, se cobra el precio normal de zona o ciudad
+    costoEnvio = Number(zonaEntrega?.precio ?? precioCiudadEntrega);
+  }
   const total = subtotal + costoEnvio;
 
   // Arma el texto de la variación seleccionada (talla/color legacy o variaciones dinámicas)
@@ -130,7 +140,7 @@ export default function CartPage() {
     const headerMsg = "Hola, Me gustaría realizar una compra:";
     const footerMsg = "Quiero confirmar disponibilidad y conocer más detalles. Gracias!";
 
-    const deliveryText = `Ciudad de entrega: ${ciudadEntrega?.nombre}\nZona de entrega: ${zonaEntrega?.nombre}\nEnvío: ${envioGratis ? "GRATIS" : `$${costoEnvio.toFixed(2)}`}`;
+    const deliveryText = `Ciudad de entrega: ${ciudadEntrega?.nombre}\nZona de entrega: ${zonaEntrega?.nombre}\nEnvío: ${envioGratis && cobroFijoZona !== undefined ? `$${cobroFijoZona.toFixed(2)} (tarifa especial)` : envioGratis ? "GRATIS" : `$${costoEnvio.toFixed(2)}`} (Mínimo para envío gratis: $${montoMinimoGratisCiudad.toFixed(2)})`;
     const totalWhatsApp = total;
 
     const message = `${headerMsg}\n\n${productosText}\n\n${deliveryText}\n\n--------------------\nSubtotal: $${subtotal.toFixed(2)}\nTotal: $${totalWhatsApp.toFixed(2)}\n--------------------\n\n${footerMsg}`;
@@ -352,7 +362,7 @@ export default function CartPage() {
                       </div>
                       <div className="flex justify-between text-sm text-[var(--textSecondary)]">
                         <span>Envío</span>
-                        <span className={envioGratis ? "font-semibold text-emerald-600" : ""}>{envioGratis ? "Gratis" : `$${costoEnvio.toFixed(2)}`}</span>
+                        <span className={envioGratis && cobroFijoZona === undefined ? "font-semibold text-emerald-600" : envioGratis && cobroFijoZona !== undefined ? "font-semibold text-amber-600" : ""}>{envioGratis && cobroFijoZona !== undefined ? `$${cobroFijoZona.toFixed(2)} (tarifa especial)` : envioGratis ? "Gratis" : `$${costoEnvio.toFixed(2)}`}</span>
                       </div>
 
                     </div>
@@ -373,11 +383,12 @@ export default function CartPage() {
                         <option value="">Selecciona una zona</option>
                         {ciudadEntrega?.zonas?.map((zone) => {
                           const precioZona = zone.precio == null ? null : Number(zone.precio);
-                          return <option key={zone.id} value={zone.id}>{zone.nombre} · {precioZona == null ? `precio ciudad ($${precioCiudadEntrega.toFixed(2)})` : `$${precioZona.toFixed(2)}`}</option>;
+                          const cobroFijoZona = zone.cobroFijo !== undefined ? Number(zone.cobroFijo) : undefined;
+                          return <option key={zone.id} value={zone.id}>{zone.nombre} · {precioZona == null ? `precio ciudad ($${precioCiudadEntrega.toFixed(2)})` : `$${precioZona.toFixed(2)}`}{cobroFijoZona !== undefined ? ` (+$${cobroFijoZona.toFixed(2)} al mínimo)` : ""}</option>;
                         })}
                       </select>
                       {ciudadEntrega && (ciudadEntrega.zonas || []).length === 0 && <p className="mt-2 text-xs text-[var(--textSecondary)]">Esta ciudad todavía no tiene zonas configuradas.</p>}
-                      {ciudadEntrega && zonaEntrega && <p className="mt-2 text-xs font-semibold text-[var(--textSecondary)]">{envioGratis ? "Tu envío será gratis por alcanzar el mínimo." : `Costo de entrega: $${costoEnvio.toFixed(2)}`}</p>}
+                      {ciudadEntrega && zonaEntrega && <p className="mt-2 text-xs font-semibold text-[var(--textSecondary)]">{envioGratis && cobroFijoZona !== undefined ? `Envío con tarifa especial: $${cobroFijoZona.toFixed(2)} (por alcanzar el mínimo)` : envioGratis ? "Tu envío será gratis por alcanzar el mínimo." : `Costo de entrega: $${costoEnvio.toFixed(2)} (Mínimo para envío gratis: $${montoMinimoGratisCiudad.toFixed(2)})`}</p>}
                     </div>
                     <button
                       onClick={handleGenerarOrden}

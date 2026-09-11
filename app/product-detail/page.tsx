@@ -37,6 +37,7 @@ export default function ProductDetailPage({ params }) {
   const [currentStock, setCurrentStock] = useState(0);
   const [atributos, setAtributos] = useState<Record<string, string>>({}); // Mapeo de ID -> nombre
   const [personalizacionValues, setPersonalizacionValues] = useState<Record<string, string>>({});
+  const [variacionPersonalizada, setVariacionPersonalizada] = useState("");
 
   const {
     isLogged, user, isAdmin,
@@ -93,6 +94,18 @@ export default function ProductDetailPage({ params }) {
     console.error("Error guardando variaciones:", err);
   }
 }, [selectedVariations, producto?.id]);
+
+  useEffect(() => {
+    if (!producto?.imagenes?.length || !Array.isArray(producto?.stockVariants)) return;
+    const variationAttributeIds = producto.variationAttributeIds || [];
+    const selectedVariant = producto.stockVariants.find((variant: any) => {
+      const attrs = variant.attributes || {};
+      return variationAttributeIds.every((attrId: string) => attrs[attrId] === selectedVariations[attrId]);
+    });
+    if (typeof selectedVariant?.imagenIndex === "number" && producto.imagenes[selectedVariant.imagenIndex]) {
+      setImgIdx(selectedVariant.imagenIndex);
+    }
+  }, [producto, selectedVariations]);
 
 
 
@@ -227,6 +240,12 @@ export default function ProductDetailPage({ params }) {
   const hasVariations = producto?.hasVariations || producto?.isCamiseta || false;
   const variationAttributeIds = producto?.variationAttributeIds || [];
   const stockVariants = producto?.stockVariants || [];
+  const selectedStockVariant = stockVariants.find((variant) => {
+    const attrs = variant.attributes || {};
+    return variationAttributeIds.every((attrId) => attrs[attrId] === selectedVariations[attrId]);
+  });
+  const permitePersonalizacionDeVariacion = Boolean(selectedStockVariant?.permitePersonalizacion);
+  const textoPersonalizacionDeVariacion = selectedStockVariant?.textoPersonalizacion?.trim() || "Escribe el valor:";
   
   // Calcular maxCantidad basado en currentStock (que es actualizado por VariationsManager)
   const maxCantidad = hasVariations ? currentStock : (producto?.stock || 0);
@@ -244,7 +263,8 @@ export default function ProductDetailPage({ params }) {
     
     // Generar key con valores de variaciones
     const values = variationAttributeIds.map(attrId => selectedVariations[attrId]).join(":");
-    return `${producto.id}:${values}`;
+    const customValue = permitePersonalizacionDeVariacion ? variacionPersonalizada.trim() : "";
+    return `${producto.id}:${values}${customValue ? `:personalizado:${customValue}` : ""}`;
   };
   
   const currentCartKey = generateCartKey();
@@ -294,6 +314,11 @@ export default function ProductDetailPage({ params }) {
       }
     }
 
+    if (permitePersonalizacionDeVariacion && !variacionPersonalizada.trim()) {
+      showToast("Escribe el nombre para el grabado", "error");
+      return;
+    }
+
     // Validar campos de personalización si el producto es personalizado
     if ((producto as any)?.personalizado && (producto as any)?.camposPersonalizacion) {
       const camposRequeridos = (producto as any).camposPersonalizacion;
@@ -316,6 +341,7 @@ export default function ProductDetailPage({ params }) {
         precioUnitario: finalPrice,
         stock: maxCantidad,
         ...(hasVariations && { selectedVariations, variationAttributeIds }),
+        ...(permitePersonalizacionDeVariacion && { variacionPersonalizada: variacionPersonalizada.trim() }),
         ...(producto as any)?.personalizado && { personalizacionValues },
         cartKey: currentCartKey,
       };
@@ -580,9 +606,30 @@ export default function ProductDetailPage({ params }) {
                   });
 
                   setCantidad(1);
+                  setVariacionPersonalizada("");
                 }}
                 onStockChange={setCurrentStock}
               />
+            )}
+
+            {permitePersonalizacionDeVariacion && (
+              <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--bgSecondary)" }}>
+                <label className="block text-sm font-semibold" style={{ color: "var(--text)" }}>
+                  {textoPersonalizacionDeVariacion}
+                </label>
+                <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
+                  Completa este campo para esta variante.
+                </p>
+                <input
+                  type="text"
+                  value={variacionPersonalizada}
+                  onChange={(e) => setVariacionPersonalizada(e.target.value)}
+                  placeholder={textoPersonalizacionDeVariacion}
+                  maxLength={80}
+                  className="mt-3 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+                  style={{ borderColor: "var(--border)", background: "var(--background)", color: "var(--text)" }}
+                />
+              </div>
             )}
 
             {/* Campos de personalización */}

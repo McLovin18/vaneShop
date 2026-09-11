@@ -175,6 +175,11 @@ export default function OrderConfirmationPage() {
                             • Color: <span className="font-semibold">{p.selectedColor}</span>
                           </p>
                         )}
+                        {p.variacionPersonalizada && (
+                          <p className="text-slate-600 dark:text-slate-400">
+                            • Nombre para grabado: <span className="font-semibold">{p.variacionPersonalizada}</span>
+                          </p>
+                        )}
                       </div>
                     )}
 

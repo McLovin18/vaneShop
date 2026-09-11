@@ -334,6 +334,11 @@ export default function PedidosAdminPage() {
 										• {attrId}: {value}
 									</p>
 								))}
+															{p.variacionPersonalizada && (
+																<p className="text-slate-600 dark:text-slate-400">
+																	• <span className="font-semibold">Nombre para grabado:</span> {p.variacionPersonalizada}
+																</p>
+															)}
 							</div>
 						)}
 						{/* Mostrar personalización si existe */}

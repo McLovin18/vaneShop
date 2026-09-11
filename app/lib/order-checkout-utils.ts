@@ -28,6 +28,7 @@ export type CheckoutRequestItem = {
   selectedColor?: string;
   selectedVariations?: Record<string, string>;
   variationAttributeIds?: string[];
+  variacionPersonalizada?: string;
 };
 
 type VariantMatch = {
@@ -197,6 +198,7 @@ export function buildOrderProductLine(item: CheckoutRequestItem, productData: an
     selectedColor: item?.selectedColor || variant?.color || undefined,
     variantKey: item?.variantKey || variant?.variantKey || undefined,
     variantSelectionSummary: variantSelectionSummary || undefined,
+    variacionPersonalizada: item?.variacionPersonalizada || undefined,
     stockTracking: variantMatch
       ? {
           type: "variant",

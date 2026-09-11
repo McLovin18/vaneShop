@@ -4,6 +4,9 @@ export interface StockVariant {
   color?: string;
   cantidad: number;
   precio?: number;
+  permitePersonalizacion?: boolean;
+  textoPersonalizacion?: string;
+  imagenIndex?: number;
   attributes?: Record<string, string>;
   label?: string;
   variantKey?: string;

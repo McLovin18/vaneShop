@@ -120,6 +120,9 @@ function buildOrderEmailHTML(orden: any): string {
                     }
                     variationsHtml += `</div>`;
                   }
+                  const customVariationHtml = p.variacionPersonalizada
+                    ? `<div class="customization"><strong>Nombre para grabado:</strong> ${p.variacionPersonalizada}</div>`
+                    : "";
                   
                   return `
                   <tr>
@@ -127,6 +130,7 @@ function buildOrderEmailHTML(orden: any): string {
                       <span class="product-name">${p.nombre || "Producto"}</span>
                       ${hasDescuento ? `<br><span class="discount-badge">-${Math.round(descuento)}%</span>` : ""}
                       ${variationsHtml}
+                      ${customVariationHtml}
                       ${customizationHtml}
                     </td>
                     <td class="text-center">${cantidad}</td>
@@ -339,6 +343,7 @@ export async function POST(req: NextRequest) {
           selectedColor: item.selectedColor,
           selectedVariations: item.selectedVariations,
           selectedVariationsConNombres: selectedVariationsConNombres,
+          variacionPersonalizada: item.variacionPersonalizada || undefined,
           personalizacionValues: item.personalizacionValues || {},
           personalizacionValuesConNombres: personalizacionValuesConNombres,
         });
