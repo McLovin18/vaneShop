@@ -382,9 +382,7 @@ export default function CartPage() {
                       <select value={zonaEntregaId} onChange={(event) => setZonaEntregaId(event.target.value)} disabled={!ciudadEntrega} className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-50">
                         <option value="">Selecciona una zona</option>
                         {ciudadEntrega?.zonas?.map((zone) => {
-                          const precioZona = zone.precio == null ? null : Number(zone.precio);
-                          const cobroFijoZona = zone.cobroFijo !== undefined ? Number(zone.cobroFijo) : undefined;
-                          return <option key={zone.id} value={zone.id}>{zone.nombre} · {precioZona == null ? `precio ciudad ($${precioCiudadEntrega.toFixed(2)})` : `$${precioZona.toFixed(2)}`}{cobroFijoZona !== undefined ? ` (+$${cobroFijoZona.toFixed(2)} al mínimo)` : ""}</option>;
+                          return <option key={zone.id} value={zone.id}>{zone.nombre}</option>;
                         })}
                       </select>
                       {ciudadEntrega && (ciudadEntrega.zonas || []).length === 0 && <p className="mt-2 text-xs text-[var(--textSecondary)]">Esta ciudad todavía no tiene zonas configuradas.</p>}
