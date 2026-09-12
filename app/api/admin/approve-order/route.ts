@@ -201,6 +201,11 @@ export async function POST(req: NextRequest) {
 
 async function enviarCorreoAprobacionCliente(orden: any) {
   try {
+    console.log("[APPROVE_ORDER] Iniciando envío de correo al cliente");
+    console.log("[APPROVE_ORDER] Orden:", orden.orderId);
+    console.log("[APPROVE_ORDER] transferenciaInfo.correo:", orden.transferenciaInfo?.correo);
+    console.log("[APPROVE_ORDER] userEmail:", orden.userEmail);
+
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
       console.error("[APPROVE_ORDER] RESEND_API_KEY no configurado");
@@ -210,6 +215,9 @@ async function enviarCorreoAprobacionCliente(orden: any) {
     const resend = new Resend(resendApiKey);
     const fromEmail = process.env.RESEND_FROM_EMAIL || "pedidos@vanessashop.com";
     const customerEmail = orden.transferenciaInfo?.correo || orden.userEmail;
+
+    console.log("[APPROVE_ORDER] fromEmail:", fromEmail);
+    console.log("[APPROVE_ORDER] customerEmail final:", customerEmail);
 
     if (!customerEmail) {
       console.error("[APPROVE_ORDER] No hay correo del cliente");
@@ -223,22 +231,24 @@ async function enviarCorreoAprobacionCliente(orden: any) {
       atributosMap[attr.id] = attr.nombre;
     });
 
+    console.log("[APPROVE_ORDER] Generando HTML del correo...");
     const emailHTML = await buildAprobacionClienteEmailHTML(orden, atributosMap);
 
-    await resend.emails.send({
+    console.log("[APPROVE_ORDER] Enviando correo a Resend...");
+    const emailResponse = await resend.emails.send({
       from: fromEmail,
       to: customerEmail,
-      subject: `Confirmación de pedido ${orden.orderId} - VaneShop`,
+      subject: `Orden ${orden.orderId} Aprobada - VaneShop`,
       html: emailHTML,
-      replyTo: fromEmail,
-      headers: {
-        'X-Priority': '1',
-        'X-MSMail-Priority': 'High',
-        'Importance': 'high',
-      },
     });
 
-    console.log(`✅ [APPROVE_CLIENTE_EMAIL] Orden ${orden.orderId} enviada a ${customerEmail}`);
+    console.log("[APPROVE_ORDER] Resend response:", JSON.stringify(emailResponse));
+
+    if (emailResponse.error) {
+      console.error(`[APPROVE_ORDER] Error enviando correo al cliente: ${emailResponse.error?.message}`);
+    } else {
+      console.log(`✅ [APPROVE_CLIENTE_EMAIL] Orden ${orden.orderId} enviada a ${customerEmail}`);
+    }
 
   } catch (error) {
     console.error("[APPROVE_ORDER] Error enviando correo al cliente:", error);
@@ -284,6 +294,36 @@ async function enviarCorreoAprobacionDueño(orden: any) {
 }
 
 async function buildAprobacionClienteEmailHTML(orden: any, atributosMap: Record<string, string>): Promise<string> {
+  // Procesar productos de forma asíncrona antes de generar HTML
+  let productosHTML = "";
+  if (orden.productos && Array.isArray(orden.productos)) {
+    const productosRows = await Promise.all(orden.productos.map(async (p: any) => {
+      const { finalPrice } = getSnapshotPricing(p);
+      const variationText = await getVariationText(p, atributosMap);
+      return `
+        <tr style="border-bottom:1px solid #e5e7eb;">
+          <td style="padding:12px 8px;font-size:13px;color:#374151;">
+            <strong>${p.nombre || "Producto"}</strong>${variationText}
+          </td>
+          <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
+          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#10b981;">$${(finalPrice * (p.cantidad || 1)).toFixed(2)}</td>
+        </tr>
+      `;
+    }));
+    productosHTML = productosRows.join('');
+  } else {
+    productosHTML = "<tr><td colspan=3 style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>";
+  }
+
+  // Calcular subtotal y total
+  const subtotal = orden.productos && Array.isArray(orden.productos) 
+    ? orden.productos.reduce((sum: number, p: any) => {
+        const { finalPrice } = getSnapshotPricing(p);
+        return sum + finalPrice * (p.cantidad || 1);
+      }, 0) 
+    : 0;
+  const total = subtotal + (orden.costoEnvio || 0);
+
   return `
 <!DOCTYPE html>
 <html>
@@ -299,8 +339,8 @@ async function buildAprobacionClienteEmailHTML(orden: any, atributosMap: Record<
         <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);border-radius:12px 12px 0 0;">
           <tr>
             <td style="padding:32px;text-align:center;color:white;">
-              <h1 style="margin:0 0 8px;font-size:28px;font-weight:bold;">✅ ¡Tu pedido ha sido aprobado!</h1>
-              <p style="margin:0;font-size:14px;opacity:0.9;">Confirmación de pedido</p>
+              <h1 style="margin:0 0 8px;font-size:28px;font-weight:bold;">Orden Aprobada</h1>
+              <p style="margin:0;font-size:14px;opacity:0.9;">Confirmación de aprobación</p>
             </td>
           </tr>
         </table>
@@ -347,23 +387,7 @@ async function buildAprobacionClienteEmailHTML(orden: any, atributosMap: Record<
                   </tr>
                 </thead>
                 <tbody>
-                  ${
-                    orden.productos && Array.isArray(orden.productos)
-                      ? (await Promise.all(orden.productos.map(async (p: any) => {
-                          const { finalPrice } = getSnapshotPricing(p);
-                          const variationText = await getVariationText(p, atributosMap);
-                          return `
-                        <tr style="border-bottom:1px solid #e5e7eb;">
-                          <td style="padding:12px 8px;font-size:13px;color:#374151;">
-                            <strong>${p.nombre || "Producto"}</strong>${variationText}
-                          </td>
-                          <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
-                          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#10b981;">$${(finalPrice * (p.cantidad || 1)).toFixed(2)}</td>
-                        </tr>
-                      `;
-                        }))).join('')
-                      : "<tr><td colspan=3 style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>"
-                  }
+                  ${productosHTML}
                 </tbody>
               </table>
             </td>
@@ -376,7 +400,7 @@ async function buildAprobacionClienteEmailHTML(orden: any, atributosMap: Record<
             <div style="background:#f9fafb;border-radius:8px;padding:16px;">
               <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
                 <span style="color:#666;">Subtotal:</span>
-                <span style="color:#1f2937;font-weight:bold;">$${(orden.productos && Array.isArray(orden.productos) ? orden.productos.reduce((sum: number, p: any) => { const { finalPrice } = getSnapshotPricing(p); return sum + finalPrice * (p.cantidad || 1); }, 0) : 0).toFixed(2)}</span>
+                <span style="color:#1f2937;font-weight:bold;">$${subtotal.toFixed(2)}</span>
               </div>
               <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
                 <span style="color:#666;">Envío:</span>
@@ -384,7 +408,7 @@ async function buildAprobacionClienteEmailHTML(orden: any, atributosMap: Record<
               </div>
               <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid #e5e7eb;font-size:16px;font-weight:bold;">
                 <span style="color:#1f2937;">Total:</span>
-                <span style="color:#10b981;">$${((orden.productos && Array.isArray(orden.productos) ? orden.productos.reduce((sum: number, p: any) => { const { finalPrice } = getSnapshotPricing(p); return sum + finalPrice * (p.cantidad || 1); }, 0) : 0) + (orden.costoEnvio || 0)).toFixed(2)}</span>
+                <span style="color:#10b981;">$${total.toFixed(2)}</span>
               </div>
             </div>
           </td>
@@ -395,12 +419,15 @@ async function buildAprobacionClienteEmailHTML(orden: any, atributosMap: Record<
           <tr>
             <td style="padding:0 36px 24px;">
               <div style="background:#dbeafe;border:1px solid #bfdbfe;border-radius:8px;padding:16px 20px;">
-                <p style="margin:0 0 12px;font-size:14px;color:#1e40af;font-weight:bold;">📦 Próximos pasos</p>
+                <p style="margin:0 0 12px;font-size:14px;color:#1e40af;font-weight:bold;">Información de envío</p>
                 <p style="margin:0 0 8px;font-size:14px;color:#1e40af;">
-                  Tu pedido ha sido aprobado y está siendo preparado para envío.
+                  Ciudad: ${orden.ciudadEntrega || "N/A"}
+                </p>
+                <p style="margin:0 0 8px;font-size:14px;color:#1e40af;">
+                  Zona: ${orden.zonaEntrega || "N/A"}
                 </p>
                 <p style="margin:0;font-size:14px;color:#1e40af;">
-                  Recibirás una notificación cuando tu pedido sea despachado.
+                  Dirección: ${orden.direccionEnvio || "N/A"}
                 </p>
               </div>
             </td>
@@ -424,6 +451,36 @@ async function buildAprobacionClienteEmailHTML(orden: any, atributosMap: Record<
 
 async function buildAprobacionDueñoEmailHTML(orden: any, atributosMap: Record<string, string>): Promise<string> {
   const userInfo = orden.transferenciaInfo || {};
+
+  // Procesar productos de forma asíncrona antes de generar HTML
+  let productosHTML = "";
+  if (orden.productos && Array.isArray(orden.productos)) {
+    const productosRows = await Promise.all(orden.productos.map(async (p: any) => {
+      const { finalPrice } = getSnapshotPricing(p);
+      const variationText = await getVariationText(p, atributosMap);
+      return `
+        <tr style="border-bottom:1px solid #e5e7eb;">
+          <td style="padding:12px 8px;font-size:13px;color:#374151;">
+            <strong>${p.nombre || "Producto"}</strong>${variationText}
+          </td>
+          <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
+          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#10b981;">$${(finalPrice * (p.cantidad || 1)).toFixed(2)}</td>
+        </tr>
+      `;
+    }));
+    productosHTML = productosRows.join('');
+  } else {
+    productosHTML = "<tr><td colspan=3 style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>";
+  }
+
+  // Calcular subtotal y total
+  const subtotal = orden.productos && Array.isArray(orden.productos) 
+    ? orden.productos.reduce((sum: number, p: any) => {
+        const { finalPrice } = getSnapshotPricing(p);
+        return sum + finalPrice * (p.cantidad || 1);
+      }, 0) 
+    : 0;
+  const total = subtotal + (orden.costoEnvio || 0);
 
   return `
 <!DOCTYPE html>
@@ -501,23 +558,7 @@ async function buildAprobacionDueñoEmailHTML(orden: any, atributosMap: Record<s
                   </tr>
                 </thead>
                 <tbody>
-                  ${
-                    orden.productos && Array.isArray(orden.productos)
-                      ? (await Promise.all(orden.productos.map(async (p: any) => {
-                          const { finalPrice } = getSnapshotPricing(p);
-                          const variationText = await getVariationText(p, atributosMap);
-                          return `
-                        <tr style="border-bottom:1px solid #e5e7eb;">
-                          <td style="padding:12px 8px;font-size:13px;color:#374151;">
-                            <strong>${p.nombre || "Producto"}</strong>${variationText}
-                          </td>
-                          <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
-                          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#10b981;">$${(finalPrice * (p.cantidad || 1)).toFixed(2)}</td>
-                        </tr>
-                      `;
-                        }))).join('')
-                      : "<tr><td colspan=3 style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>"
-                  }
+                  ${productosHTML}
                 </tbody>
               </table>
             </td>
@@ -530,7 +571,7 @@ async function buildAprobacionDueñoEmailHTML(orden: any, atributosMap: Record<s
             <div style="background:#f9fafb;border-radius:8px;padding:16px;">
               <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
                 <span style="color:#666;">Subtotal:</span>
-                <span style="color:#1f2937;font-weight:bold;">$${(orden.productos && Array.isArray(orden.productos) ? orden.productos.reduce((sum: number, p: any) => { const { finalPrice } = getSnapshotPricing(p); return sum + finalPrice * (p.cantidad || 1); }, 0) : 0).toFixed(2)}</span>
+                <span style="color:#1f2937;font-weight:bold;">$${subtotal.toFixed(2)}</span>
               </div>
               <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
                 <span style="color:#666;">Envío:</span>
@@ -538,7 +579,7 @@ async function buildAprobacionDueñoEmailHTML(orden: any, atributosMap: Record<s
               </div>
               <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid #e5e7eb;font-size:16px;font-weight:bold;">
                 <span style="color:#1f2937;">Total:</span>
-                <span style="color:#10b981;">$${((orden.productos && Array.isArray(orden.productos) ? orden.productos.reduce((sum: number, p: any) => { const { finalPrice } = getSnapshotPricing(p); return sum + finalPrice * (p.cantidad || 1); }, 0) : 0) + (orden.costoEnvio || 0)).toFixed(2)}</span>
+                <span style="color:#10b981;">$${total.toFixed(2)}</span>
               </div>
             </div>
           </td>

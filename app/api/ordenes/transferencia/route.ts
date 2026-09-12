@@ -220,6 +220,7 @@ async function enviarCorreoAlCliente(orden: any) {
   try {
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
+      console.error("[TRANSFERENCIA] RESEND_API_KEY no configurado");
       return;
     }
 
@@ -227,39 +228,72 @@ async function enviarCorreoAlCliente(orden: any) {
     const customerEmail = orden.transferenciaInfo?.correo || orden.userEmail;
 
     if (!customerEmail) {
+      console.error("[TRANSFERENCIA] No hay correo del cliente");
       return;
     }
 
+    // Cargar atributos para mostrar nombres en lugar de IDs
+    const atributos = await obtenerAtributos();
+    const atributosMap: Record<string, string> = {};
+    atributos.forEach((attr: any) => {
+      atributosMap[attr.id] = attr.nombre;
+    });
 
     const resend = new Resend(resendApiKey);
-    const emailHTML = buildClienteEmailHTML(orden);
+    const emailHTML = await buildClienteEmailHTML(orden, atributosMap);
 
     const emailResponse = await resend.emails.send({
       from: fromEmail,
       to: customerEmail,
-      subject: `Confirmación de pedido ${orden.orderId} - VaneShop`,
+      subject: `Tu pedido ${orden.orderId} ha sido recibido - VaneShop`,
       html: emailHTML,
-      replyTo: fromEmail,
-      headers: {
-        'X-Priority': '1',
-        'X-MSMail-Priority': 'High',
-        'Importance': 'high',
-      },
     });
 
     if (emailResponse.error) {
-      throw new Error(emailResponse.error?.message || "Error de Resend");
+      console.error(`[TRANSFERENCIA] Error enviando correo al cliente: ${emailResponse.error?.message}`);
+    } else {
+      console.log(`✅ [TRANSFERENCIA_CLIENTE_EMAIL] Orden ${orden.orderId} enviada a ${customerEmail}`);
     }
 
-
   } catch (error) {
-    throw error; // Re-lanzar para que se capture en el try principal
+    console.error("[TRANSFERENCIA] Error enviando correo al cliente:", error);
+    // No fallar el proceso si el correo falla
   }
 }
 
 async function buildTransferenciaEmailHTML(orden: any, atributosMap: Record<string, string>): Promise<string> {
   const cuentaInfo = orden.transferenciaInfo?.cuentaInfo || {};
   const userInfo = orden.transferenciaInfo || {};
+
+  // Procesar productos de forma asíncrona antes de generar HTML
+  let productosHTML = "";
+  if (orden.productos && Array.isArray(orden.productos)) {
+    const productosRows = await Promise.all(orden.productos.map(async (p: any) => {
+      const { finalPrice } = getSnapshotPricing(p);
+      const variationText = await getVariationText(p, atributosMap);
+      return `
+        <tr style="border-bottom:1px solid #e5e7eb;">
+          <td style="padding:12px 8px;font-size:13px;color:#374151;">
+            <strong>${p.nombre || "Producto"}</strong>${variationText}
+          </td>
+          <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
+          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#10b981;">$${(finalPrice * (p.cantidad || 1)).toFixed(2)}</td>
+        </tr>
+      `;
+    }));
+    productosHTML = productosRows.join('');
+  } else {
+    productosHTML = "<tr><td colspan=3 style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>";
+  }
+
+  // Calcular subtotal y total
+  const subtotal = orden.productos && Array.isArray(orden.productos) 
+    ? orden.productos.reduce((sum: number, p: any) => {
+        const { finalPrice } = getSnapshotPricing(p);
+        return sum + finalPrice * (p.cantidad || 1);
+      }, 0) 
+    : 0;
+  const total = subtotal + (orden.costoEnvio || 0);
 
   return `
 <!DOCTYPE html>
@@ -380,23 +414,7 @@ async function buildTransferenciaEmailHTML(orden: any, atributosMap: Record<stri
                   </tr>
                 </thead>
                 <tbody>
-                  ${
-                    orden.productos && Array.isArray(orden.productos)
-                      ? (await Promise.all(orden.productos.map(async (p: any) => {
-                          const { finalPrice } = getSnapshotPricing(p);
-                          const variationText = await getVariationText(p, atributosMap);
-                          return `
-                        <tr style="border-bottom:1px solid #e5e7eb;">
-                          <td style="padding:12px 8px;font-size:13px;color:#374151;">
-                            <strong>${p.nombre || "Producto"}</strong>${variationText}
-                          </td>
-                          <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
-                          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#10b981;">$${(finalPrice * (p.cantidad || 1)).toFixed(2)}</td>
-                        </tr>
-                      `;
-                        }))).join('')
-                      : "<tr><td colspan=3 style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>"
-                  }
+                  ${productosHTML}
                 </tbody>
               </table>
             </td>
@@ -409,7 +427,7 @@ async function buildTransferenciaEmailHTML(orden: any, atributosMap: Record<stri
             <div style="background:#f9fafb;border-radius:8px;padding:16px;">
               <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
                 <span style="color:#666;">Subtotal:</span>
-                <span style="color:#1f2937;font-weight:bold;">$${(orden.productos && Array.isArray(orden.productos) ? orden.productos.reduce((sum: number, p: any) => { const { finalPrice } = getSnapshotPricing(p); return sum + finalPrice * (p.cantidad || 1); }, 0) : 0).toFixed(2)}</span>
+                <span style="color:#1f2937;font-weight:bold;">$${subtotal.toFixed(2)}</span>
               </div>
               <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
                 <span style="color:#666;">Envío:</span>
@@ -417,7 +435,7 @@ async function buildTransferenciaEmailHTML(orden: any, atributosMap: Record<stri
               </div>
               <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid #e5e7eb;font-size:16px;font-weight:bold;">
                 <span style="color:#1f2937;">Total:</span>
-                <span style="color:#10b981;">$${((orden.productos && Array.isArray(orden.productos) ? orden.productos.reduce((sum: number, p: any) => { const { finalPrice } = getSnapshotPricing(p); return sum + finalPrice * (p.cantidad || 1); }, 0) : 0) + (orden.costoEnvio || 0)).toFixed(2)}</span>
+                <span style="color:#10b981;">$${total.toFixed(2)}</span>
               </div>
             </div>
           </td>
@@ -458,8 +476,38 @@ async function buildTransferenciaEmailHTML(orden: any, atributosMap: Record<stri
   `.trim();
 }
 
-function buildClienteEmailHTML(orden: any): string {
+async function buildClienteEmailHTML(orden: any, atributosMap: Record<string, string>): Promise<string> {
   const userInfo = orden.transferenciaInfo || {};
+
+  // Procesar productos de forma asíncrona antes de generar HTML
+  let productosHTML = "";
+  if (orden.productos && Array.isArray(orden.productos)) {
+    const productosRows = await Promise.all(orden.productos.map(async (p: any) => {
+      const { finalPrice } = getSnapshotPricing(p);
+      const variationText = await getVariationText(p, atributosMap);
+      return `
+        <tr style="border-bottom:1px solid #e5e7eb;">
+          <td style="padding:12px 8px;font-size:13px;color:#374151;">
+            <strong>${p.nombre || "Producto"}</strong>${variationText}
+          </td>
+          <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
+          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#3b82f6;">$${(finalPrice * (p.cantidad || 1)).toFixed(2)}</td>
+        </tr>
+      `;
+    }));
+    productosHTML = productosRows.join('');
+  } else {
+    productosHTML = "<tr><td colspan='3' style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>";
+  }
+
+  // Calcular subtotal y total
+  const subtotal = orden.productos && Array.isArray(orden.productos) 
+    ? orden.productos.reduce((sum: number, p: any) => {
+        const { finalPrice } = getSnapshotPricing(p);
+        return sum + finalPrice * (p.cantidad || 1);
+      }, 0) 
+    : 0;
+  const total = subtotal + (orden.costoEnvio || 0);
 
   return `
 <!DOCTYPE html>
@@ -524,19 +572,7 @@ function buildClienteEmailHTML(orden: any): string {
                   </tr>
                 </thead>
                 <tbody>
-                  ${
-                    orden.productos && Array.isArray(orden.productos)
-                      ? orden.productos.map((p: any) => `
-                        <tr style="border-bottom:1px solid #e5e7eb;">
-                          <td style="padding:12px 8px;font-size:13px;color:#374151;">
-                            <strong>${p.nombre || "Producto"}</strong>
-                          </td>
-                          <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
-                          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#3b82f6;">$${(p.subtotal || 0).toFixed(2)}</td>
-                        </tr>
-                      `).join('')
-                      : "<tr><td colspan=3 style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>"
-                  }
+                  ${productosHTML}
                 </tbody>
               </table>
             </td>
@@ -549,11 +585,15 @@ function buildClienteEmailHTML(orden: any): string {
             <div style="background:#f9fafb;border-radius:8px;padding:16px;">
               <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
                 <span style="color:#666;">Subtotal:</span>
-                <span style="color:#1f2937;font-weight:bold;">$${(orden.total || 0).toFixed(2)}</span>
+                <span style="color:#1f2937;font-weight:bold;">$${subtotal.toFixed(2)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
+                <span style="color:#666;">Envío:</span>
+                <span style="color:#1f2937;font-weight:bold;">$${(orden.costoEnvio || 0).toFixed(2)}</span>
               </div>
               <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid #e5e7eb;font-size:16px;font-weight:bold;">
                 <span style="color:#1f2937;">Total:</span>
-                <span style="color:#3b82f6;">$${(orden.total || 0).toFixed(2)}</span>
+                <span style="color:#3b82f6;">$${total.toFixed(2)}</span>
               </div>
             </div>
           </td>
