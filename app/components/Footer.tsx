@@ -125,7 +125,7 @@ const Footer: React.FC = () => {
               </a>
               <div className="flex items-center gap-1 text-xs" style={{ color: "#8a7556" }}>
                 <IconLocation />
-                <span>ɢʏᴇ - Via a la Costa</span>
+                <span>Guayaquil, Ecuador</span>
               </div>
 
             </div>
