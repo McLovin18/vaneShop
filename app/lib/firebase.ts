@@ -24,15 +24,7 @@ export const storage = getStorage(app);
 
 // Habilitar persistencia offline para Firestore
 if (typeof window !== "undefined") {
-  enableIndexedDbPersistence(db, {
-    cacheSizeBytes: CACHE_SIZE_UNLIMITED,
-  }).catch((err) => {
-    if (err.code === "failed-precondition") {
-      console.log("[Firebase] Múltiples pestañas abiertas, persistencia no disponible");
-    } else if (err.code === "unimplemented") {
-      console.log("[Firebase] El navegador no soporta IndexedDB");
-    } else {
-      console.error("[Firebase] Error al habilitar persistencia:", err);
-    }
+  enableIndexedDbPersistence(db).catch((err) => {
+    // Error enabling persistence
   });
 }

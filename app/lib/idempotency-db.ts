@@ -96,8 +96,6 @@ export async function saveIdempotencyRecord(
 
     await db.collection("idempotency_records").doc(key).set(record);
 
-    console.log(`✅ [IDEMPOTENCY] Record saved for key: ${key}`);
-
     return { success: true };
   } catch (err: any) {
     console.error("[idempotency-db] Error saving record:", err);
@@ -124,11 +122,8 @@ export async function getIdempotencyRecord(
 
     // Verificar que no está expirado
     if (data.expiresAt && new Date(data.expiresAt) < new Date()) {
-      console.log(`⏰ [IDEMPOTENCY] Record expired: ${key}`);
       return null;
     }
-
-    console.log(`♻️  [IDEMPOTENCY] Duplicate request detected, returning cached response`);
     return data;
   } catch (err: any) {
     console.error("[idempotency-db] Error fetching record:", err);
@@ -208,8 +203,6 @@ export async function cleanupExpiredIdempotencyRecords(): Promise<{
     });
 
     await batch.commit();
-
-    console.log(`✅ [CLEANUP] Deleted ${count} expired idempotency records`);
 
     return { deleted: count };
   } catch (err: any) {

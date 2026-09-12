@@ -158,9 +158,7 @@ export const initializeLandingPage = async () => {
   try {
     const landingRef = doc(db, "landingPage", "main");
     await setDoc(landingRef, DEFAULT_LANDING);
-    console.log("✅ Landing page inicializada");
   } catch (error) {
-    console.error("Error inicializando landing page:", error);
   }
 };
 /**
@@ -391,11 +389,6 @@ export const saveLandingSections = async (
     });
 
     await batch.commit();
-
-    console.log(
-      `✅ Secciones ${version} guardadas en Firebase:`,
-      sections?.length || 0
-    );
     return { success: true, sections };
   } catch (error) {
     console.error("Error guardando secciones:", error);
@@ -463,11 +456,8 @@ export const publishLanding = async () => {
     batch.update(landingRef, updatePayload);
 
     await batch.commit();
-
-    console.log("✅ Landing publicada desde draft");
     return { success: true };
   } catch (error) {
-    console.error("Error publicando landing:", error);
     throw error;
   }
 };

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { crearOrden } from "../../../lib/ordenes-db";
 import { Resend } from "resend";
+import { storage } from "../../../lib/firebase-admin";
 
 /**
  * 📧 ENDPOINT: Procesar pago por transferencia
@@ -40,13 +41,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Convertir imagen a base64 para guardar en Firestore
+    // Subir imagen a Firebase Storage
     const bytes = await evidencia.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const evidenciaBase64 = `data:${evidencia.type};base64,${buffer.toString('base64')}`;
+    const fileName = `evidencias/${Date.now()}_${evidencia.name}`;
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID}.appspot.com`;
+    
+    
+    let evidenciaUrl: string;
+    
+    try {
+      const bucket = storage.bucket(bucketName);
+      const file = bucket.file(fileName);
+
+      await file.save(buffer, {
+        metadata: {
+          contentType: evidencia.type,
+        },
+      });
+
+      // Hacer el archivo público
+      await file.makePublic();
+      
+      // Generar URL firmada válida por 7 días como alternativa
+      const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 días
+      });
+      
+      // Verificar que el archivo sea realmente público
+      const [metadata] = await file.getMetadata();
+      
+      // Usar URL pública, pero tener URL firmada como backup
+      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+      evidenciaUrl = publicUrl;
+      ordenData.transferenciaInfo.evidenciaUrlFirmada = signedUrl; // Backup URL
+
+      ordenData.transferenciaInfo.evidenciaMetodo = "storage";
+    } catch (storageError: any) {
+      // Fallback: usar base64 si Storage falla
+      evidenciaUrl = `data:${evidencia.type};base64,${buffer.toString('base64')}`;
+      ordenData.transferenciaInfo.evidenciaMetodo = "base64_fallback";
+    }
 
     // Agregar evidencia a la orden
-    ordenData.transferenciaInfo.evidencia = evidenciaBase64;
+    ordenData.transferenciaInfo.evidencia = evidenciaUrl;
     ordenData.transferenciaInfo.evidenciaTipo = evidencia.type;
     ordenData.estado = "pendiente_aprobacion";
 
@@ -67,7 +106,6 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error("[TRANSFERENCIA] Error:", error);
     return NextResponse.json(
       { error: error.message || "Error al procesar la transferencia" },
       { status: 500 }
@@ -79,40 +117,61 @@ async function enviarCorreoAlDueño(orden: any) {
   try {
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
-      console.error("[TRANSFERENCIA] ❌ RESEND_API_KEY no configurado - No se puede enviar correo al dueño");
       return;
     }
 
     const ownerEmail = process.env.OWNER_EMAIL;
     if (!ownerEmail) {
-      console.error("[TRANSFERENCIA] ❌ OWNER_EMAIL no configurado - No se puede enviar correo al dueño");
       return;
     }
 
     const fromEmail = process.env.RESEND_FROM_EMAIL || "pedidos@vanessashop.com";
 
-    console.log(`[TRANSFERENCIA] Enviando correo al dueño: ${ownerEmail} para orden ${orden.orderId}`);
 
     const resend = new Resend(resendApiKey);
     const emailHTML = buildTransferenciaEmailHTML(orden);
+
+    // Preparar adjuntos si hay evidencia (siempre adjuntar para garantizar visualización)
+    const attachments: any[] = [];
+    if (orden.transferenciaInfo?.evidencia) {
+      // Si es base64, adjuntar directamente
+      if (orden.transferenciaInfo.evidencia.startsWith('data:')) {
+        const base64Data = orden.transferenciaInfo.evidencia.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+        attachments.push({
+          filename: `evidencia_orden_${orden.orderId}.jpg`,
+          content: buffer,
+        });
+      } else if (orden.transferenciaInfo.evidencia.startsWith('http')) {
+        // Si es URL, descargar y adjuntar
+        try {
+          const response = await fetch(orden.transferenciaInfo.evidencia);
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          attachments.push({
+            filename: `evidencia_orden_${orden.orderId}.jpg`,
+            content: buffer,
+          });
+        } catch (downloadError) {
+        }
+      }
+    }
 
     const emailResponse = await resend.emails.send({
       from: fromEmail,
       to: ownerEmail,
       subject: `Nueva transferencia pendiente - Orden ${orden.orderId}`,
       html: emailHTML,
+      attachments: attachments.length > 0 ? attachments : undefined,
       replyTo: orden.transferenciaInfo?.correo || orden.userEmail,
     });
 
     if (emailResponse.error) {
-      console.error("[TRANSFERENCIA] ❌ Error de Resend al enviar correo al dueño:", emailResponse.error);
       throw new Error(emailResponse.error?.message || "Error de Resend");
     }
 
-    console.log(`✅ [TRANSFERENCIA_EMAIL] Orden ${orden.orderId} enviada a ${ownerEmail} - Resend ID: ${emailResponse.data?.id}`);
 
   } catch (error) {
-    console.error("[TRANSFERENCIA] ❌ Error enviando correo al dueño:", error);
     throw error; // Re-lanzar para que se capture en el try principal
   }
 }
@@ -121,7 +180,6 @@ async function enviarCorreoAlCliente(orden: any) {
   try {
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
-      console.error("[TRANSFERENCIA] ❌ RESEND_API_KEY no configurado - No se puede enviar correo al cliente");
       return;
     }
 
@@ -129,11 +187,9 @@ async function enviarCorreoAlCliente(orden: any) {
     const customerEmail = orden.transferenciaInfo?.correo || orden.userEmail;
 
     if (!customerEmail) {
-      console.error("[TRANSFERENCIA] ❌ No hay correo del cliente - No se puede enviar notificación");
       return;
     }
 
-    console.log(`[TRANSFERENCIA] Enviando correo al cliente: ${customerEmail} para orden ${orden.orderId}`);
 
     const resend = new Resend(resendApiKey);
     const emailHTML = buildClienteEmailHTML(orden);
@@ -152,14 +208,11 @@ async function enviarCorreoAlCliente(orden: any) {
     });
 
     if (emailResponse.error) {
-      console.error("[TRANSFERENCIA] ❌ Error de Resend al enviar correo al cliente:", emailResponse.error);
       throw new Error(emailResponse.error?.message || "Error de Resend");
     }
 
-    console.log(`✅ [TRANSFERENCIA_CLIENTE_EMAIL] Orden ${orden.orderId} enviada a ${customerEmail} - Resend ID: ${emailResponse.data?.id}`);
 
   } catch (error) {
-    console.error("[TRANSFERENCIA] ❌ Error enviando correo al cliente:", error);
     throw error; // Re-lanzar para que se capture en el try principal
   }
 }
@@ -252,7 +305,18 @@ function buildTransferenciaEmailHTML(orden: any): string {
               <h2 style="margin:0 0 12px;font-size:16px;font-weight:bold;color:#1f2937;">Evidencia de pago</h2>
               <div style="background:#f9fafb;border-radius:8px;padding:16px;text-align:center;">
                 ${orden.transferenciaInfo?.evidencia ? 
-                  `<img src="${orden.transferenciaInfo.evidencia}" alt="Evidencia de pago" style="max-width:100%;border-radius:8px;">` : 
+                  `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td style="text-align:center;padding:8px;">
+                        <img src="${orden.transferenciaInfo.evidenciaUrlFirmada || orden.transferenciaInfo.evidencia}" alt="Evidencia de pago" style="max-width:100%;max-height:400px;border-radius:8px;border:1px solid #e5e7eb;display:block;margin:0 auto;">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align:center;padding:8px 0 0;">
+                        <a href="${orden.transferenciaInfo.evidenciaUrlFirmada || orden.transferenciaInfo.evidencia}" target="_blank" style="color:#3b82f6;text-decoration:underline;font-size:12px;">Ver imagen en tamaño completo</a>
+                      </td>
+                    </tr>
+                  </table>` : 
                   '<p style="margin:0;color:#666;">No se adjuntó evidencia</p>'
                 }
               </div>

@@ -135,9 +135,6 @@ export async function recordEmailResend(
       );
     });
 
-    console.log(
-      `📧 [RATE-LIMIT] Email resend recorded: ${email} (Order: ${orderId})`
-    );
 
     return { success: true };
   } catch (err: any) {
@@ -177,7 +174,6 @@ export async function cleanupExpiredEmailRateLimits(): Promise<{
 
     await batch.commit();
 
-    console.log(`✅ [CLEANUP] Deleted ${count} expired email rate limit records`);
 
     return { deleted: count };
   } catch (err: any) {

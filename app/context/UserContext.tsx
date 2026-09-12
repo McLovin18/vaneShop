@@ -65,30 +65,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Guarda el uid anterior para detectar transición de invitado → logueado
   const prevUidRef = useRef<string | null>(null);
 
-  // Solo log en desarrollo para evitar impacto en rendimiento en producción
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔄 UserContext state:', { user, userLoading, cartLoading, cartReady, carritoLength: carrito.length });
-  }
 
   // Load guest cart immediately on mount without waiting for auth
   useEffect(() => {
-    console.log('🚀 Loading initial guest cart');
     const initialGuestCart = getInitialCart(null);
-    console.log('🚀 Initial guest cart length:', initialGuestCart.length);
     setCarrito(initialGuestCart);
     setCartLoading(false);
     // Wait one tick to make sure the state update has gone through, then set flags
     setTimeout(() => {
       setCartReady(true);
       cartLoadedRef.current = true;
-      console.log('✅ Cart ready and cartLoadedRef set to true');
-    }, 0); // Reducido de 100ms a 0ms para mejor rendimiento
+    }, 0);
   }, []);
 
   // Escuchar cambios en el token (incluye inicio de sesión y refresh de claims)
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, async (realUser) => {
-      console.log('🔐 onIdTokenChanged fired', { realUser });
       if (!realUser) {
         setUser(null);
         setUserLoading(false);
@@ -115,7 +107,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             return;
           }
         } catch (e) {
-          console.log('⚠️ Failed to fetch user role from backend:', e);
+          // Failed to fetch user role from backend
         }
         
         // Fallback: leer claims desde el token
@@ -127,11 +119,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
             emailVerified: realUser.emailVerified 
           });
         } catch (e) {
-          console.log('⚠️ Failed to get token result:', e);
+          // Failed to get token result
           setUser({ ...(realUser as any), emailVerified: realUser.emailVerified });
         }
       } catch (err) {
-        console.log('⚠️ Error in onIdTokenChanged:', err);
+        // Error in onIdTokenChanged
         setUser({ ...(realUser as any), emailVerified: realUser.emailVerified });
       }
       
@@ -149,29 +141,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // (invitado => 'carrito_guest', logueado => 'carrito_<uid>')
   // Si el usuario acaba de autenticarse, fusionar el carrito guest en el suyo
   useEffect(() => {
-    console.log('📦 Cart update useEffect triggered', { userLoading, user, prevUid: prevUidRef.current });
     if (userLoading) return;
     const uid = (user as any)?.uid || null;
     
     let newCart;
     if (uid && prevUidRef.current === null) {
       // Transición: invitado → logueado → fusionar carrito guest
-      console.log('🔄 Merging guest cart into user cart');
       newCart = mergeGuestCartIntoUser(uid);
-      console.log('📦 Merged cart length:', newCart.length);
       setCarrito(newCart);
     } else if (uid && prevUidRef.current !== uid) {
       // User changed, load their cart
-      console.log('📦 Loading user cart, uid:', uid);
       newCart = getInitialCart(uid);
-      console.log('📦 User cart length:', newCart.length);
       setCarrito(newCart);
     }
     
     const setReady = () => {
       cartLoadedRef.current = true;
       setCartReady(true);
-      console.log('✅ cartReady set to true');
     };
 
     if (newCart) {
@@ -193,14 +179,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Guardar carrito en localStorage, pero NO durante la carga inicial
   useEffect(() => {
-    console.log('💾 saveCart useEffect triggered, cartLoadedRef:', cartLoadedRef.current, 'cart length:', carrito.length);
     if (!cartLoadedRef.current || !cartReady) {
       // Primera ejecución tras cargar: marcar como listo y no guardar
-      console.log('💾 Not saving cart (initial load or not ready)');
       return;
     }
     const uid = (user as any)?.uid || null;
-    console.log('💾 Saving cart to localStorage, uid:', uid, 'cart:', carrito);
     saveCart(carrito, uid);
   }, [carrito]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -217,29 +200,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Métodos para carrito
   const addCarrito = (producto) => {
-    console.log('➕ addCarrito called with producto:', producto);
     setCarrito((prev) => {
       const nextKey = getCartItemKey(producto);
-      console.log('➕ addCarrito nextKey:', nextKey, 'prev cart length:', prev.length);
       // Si ya existe, reemplaza la cantidad
       if (prev.find((p) => getCartItemKey(p) === nextKey)) {
-        console.log('➕ addCarrito: product already exists, updating');
         const updated = prev.map((p) =>
           getCartItemKey(p) === nextKey ? { ...p, ...producto, cantidad: producto.cantidad || 1 } : p
         );
-        console.log('➕ addCarrito updated cart:', updated);
         return updated;
       }
       const newCart = [...prev, { ...producto, cantidad: producto.cantidad || 1 }];
-      console.log('➕ addCarrito: adding new product, new cart:', newCart);
       return newCart;
     });
   };
   const removeCarrito = (id) => {
-    console.log('➖ removeCarrito called with id:', id);
     setCarrito((prev) => {
       const newCart = prev.filter((p) => getCartItemKey(p) !== id);
-      console.log('➖ removeCarrito new cart:', newCart);
       return newCart;
     });
   };

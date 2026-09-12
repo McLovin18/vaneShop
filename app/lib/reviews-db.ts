@@ -53,14 +53,12 @@ export async function addProductReview(review: Omit<ProductReview, "id" | "appro
 
 export async function getPendingReviews(): Promise<ProductReview[]> {
   try {
-    console.log("[getPendingReviews] Starting...");
     
     // Obtener documentos sin where para evitar problemas de índice/campos
     const snapshot = await db.collection(REVIEWS_COLLECTION)
       .limit(1000)
       .get();
     
-    console.log("[getPendingReviews] Total docs fetched:", snapshot.docs.length);
     
     // Filtrar en memoria los pendientes
     const pendingDocs = snapshot.docs.filter(doc => {
@@ -68,7 +66,6 @@ export async function getPendingReviews(): Promise<ProductReview[]> {
       return data.approved === false || data.approved === undefined;
     });
     
-    console.log("[getPendingReviews] Pending docs after filter:", pendingDocs.length);
     
     const results: ProductReview[] = [];
     for (const doc of pendingDocs) {
@@ -97,17 +94,14 @@ export async function getPendingReviews(): Promise<ProductReview[]> {
       return ta > tb ? -1 : 1;
     });
     
-    console.log("[getPendingReviews] ✅ Returning", results.length, "reviews");
     return results;
   } catch (err) {
-    console.error("[getPendingReviews] ❌ Error:", err);
     throw err;
   }
 }
 
 export async function approveReview(id: string): Promise<string | null> {
   try {
-    console.log("[approveReview] approving id:", id);
     const docRef = db.collection(REVIEWS_COLLECTION).doc(id);
     const snap = await docRef.get();
     if (!snap.exists) {
@@ -118,21 +112,16 @@ export async function approveReview(id: string): Promise<string | null> {
     const data = snap.data() || {};
     const productId = (data as any).productId || null;
     await docRef.update({ approved: true });
-    console.log("[approveReview] done approving id:", id, "productId:", productId);
     return productId;
   } catch (err) {
-    console.error("[approveReview] error approving id:", id, err);
     throw err;
   }
 }
 
 export async function rejectReview(id: string): Promise<void> {
   try {
-    console.log("[rejectReview] deleting id:", id);
     await db.collection(REVIEWS_COLLECTION).doc(id).delete();
-    console.log("[rejectReview] deleted id:", id);
   } catch (err) {
-    console.error("[rejectReview] error deleting id:", id, err);
     throw err;
   }
 }

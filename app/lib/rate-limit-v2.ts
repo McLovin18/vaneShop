@@ -11,7 +11,6 @@ function getRedisClient(): Redis {
       throw new Error("❌ Variables de entorno faltantes");
     }
 
-    console.log("[rate-limit] Inicializando cliente Redis...");
     redis = new Redis({ url, token });
   }
   return redis;
@@ -72,7 +71,6 @@ export async function checkRateLimit(
     if (emailCount === 1) {
       // Primer intento: ventana de 5 minutos (300 segundos)
       await redisClient.expire(emailKey, 300);
-      console.log(`[rate-limit] 📝 Nueva sesión: ${email}`);
     }
     
     // Límite: 5 intentos en 5 minutos
@@ -80,7 +78,6 @@ export async function checkRateLimit(
       const remainingSeconds = emailTtl > 0 ? emailTtl : 300;
       const blockedUntil = Date.now() + (remainingSeconds * 1000);
       
-      console.warn(`[rate-limit] ❌ EMAIL BLOQUEADO: ${email} (${emailCount}/3)`);
       return {
         allowed: false,
         remaining: 0,
@@ -108,7 +105,6 @@ export async function checkRateLimit(
         const remainingSeconds = ipTtl > 0 ? ipTtl : 1800;
         const blockedUntil = Date.now() + (remainingSeconds * 1000);
         
-        console.warn(`[rate-limit] ⚠️  IP BLOQUEADA: ${ip} (${ipCount}/10)`);
         return {
           allowed: false,
           remaining: 0,
@@ -118,7 +114,6 @@ export async function checkRateLimit(
         };
       }
       
-      console.log(`[rate-limit] ✓ Email ${emailCount}/3 | IP ${ipCount}/10`);
     }
     
     // ✅ PERMITIDO
@@ -128,7 +123,6 @@ export async function checkRateLimit(
     };
     
   } catch (err: any) {
-    console.error("[rate-limit] ERROR:", err.message);
     // FAIL-SAFE: Denegar
     return {
       allowed: false,
@@ -157,9 +151,7 @@ export async function markRegistrationSuccess(
       blockDays * 86400, // 7 días = 604800 segundos
       "blocked"
     );
-    console.log(`[rate-limit] ✅ Registro éxito: ${email} (bloqueado ${blockDays}d anti-spam)`);
   } catch (err: any) {
-    console.error("[rate-limit] Error en markRegistrationSuccess:", err.message);
   }
 }
 

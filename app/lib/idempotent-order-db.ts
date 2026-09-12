@@ -217,8 +217,6 @@ export async function cleanupExpiredLocks(): Promise<{
 
     await batch.commit();
 
-    console.log(`✅ [CLEANUP] Deleted ${count} expired order locks`);
-
     return { deleted: count };
   } catch (err: any) {
     console.error("[idempotent-order] Error cleaning up:", err);

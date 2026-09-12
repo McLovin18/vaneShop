@@ -53,13 +53,11 @@ export async function trackPageView(): Promise<void> {
     // En WebViews, aplicar cooldown para evitar requests excesivos
     const now = Date.now();
     if (now - lastTrackTime < TRACK_COOLDOWN) {
-      console.log("[Analytics] Skipping track due to cooldown");
       return;
     }
     lastTrackTime = now;
 
     const deviceId = getOrCreateDeviceId();
-    console.log("[Analytics] Tracking page view for device:", deviceId);
     
     const response = await fetch(API_TRACK_URL, {
       method: "POST",
@@ -74,13 +72,10 @@ export async function trackPageView(): Promise<void> {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[Analytics] API returned non-ok status:", response.status);
-      console.error("[Analytics] API response:", errorText);
-    } else {
-      console.log("[Analytics] Page view tracked successfully");
+      // API returned non-ok status
     }
   } catch (error) {
-    console.error("[Analytics] Error tracking page view:", error);
+    // Error tracking page view
   }
 }
 
@@ -93,7 +88,6 @@ export async function trackClick(
 ): Promise<void> {
   try {
     const deviceId = getOrCreateDeviceId();
-    console.log("[Analytics] Tracking click:", { type, deviceId });
     
     const response = await fetch(API_TRACK_URL, {
       method: "POST",
@@ -109,13 +103,10 @@ export async function trackClick(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[Analytics] Click API returned non-ok status:", response.status);
-      console.error("[Analytics] Click API response:", errorText);
-    } else {
-      console.log("[Analytics] Click tracked successfully");
+      // Click API returned non-ok status
     }
   } catch (error) {
-    console.error("[Analytics] Error tracking click:", error);
+    // Error tracking click
   }
 }
 

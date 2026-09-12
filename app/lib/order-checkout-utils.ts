@@ -215,12 +215,6 @@ export function buildOrderProductLine(item: CheckoutRequestItem, productData: an
 }
 
 export function applyStockDeltaToProduct(productData: any, orderItem: any, delta: number) {
-  console.log("[applyStockDeltaToProduct] Inputs:", {
-    productId: productData?.id,
-    productName: productData?.nombre,
-    orderItem,
-    delta,
-  });
 
   const variantMatch = findMatchingVariant(productData, {
     id: orderItem?.id,
@@ -230,8 +224,6 @@ export function applyStockDeltaToProduct(productData: any, orderItem: any, delta
     selectedTalla: orderItem?.stockTracking?.talla || orderItem?.selectedTalla,
     selectedColor: orderItem?.stockTracking?.color || orderItem?.selectedColor,
   });
-
-  console.log("[applyStockDeltaToProduct] variantMatch:", variantMatch);
 
   if (orderItem?.stockTracking?.type === "variant" || variantMatch) {
     if (!variantMatch) {
@@ -270,10 +262,6 @@ export function applyStockDeltaToProduct(productData: any, orderItem: any, delta
       0
     );
 
-    console.log("[applyStockDeltaToProduct] Result:", {
-      stockVariants: variants,
-      totalStock,
-    });
 
     return {
       stockVariants: variants,
