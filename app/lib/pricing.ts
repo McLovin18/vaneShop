@@ -28,6 +28,7 @@ export function getSnapshotPricing(item: any): SnapshotPricing {
   const discount = Number(item?.descuento || 0);
   const hasDiscount = !isNaN(discount) && discount > 0 && discount < 100;
   const basePrice = Number(item?.precioBase ?? item?.precio ?? 0);
+  // Priorizar precioUnitario guardado (ya incluye variaciones) sobre precioFinal o cálculo
   const finalPrice = Number(item?.precioUnitario ?? item?.precioFinal ?? (hasDiscount ? basePrice * (1 - discount / 100) : basePrice));
   const fakeOldPrice = hasDiscount ? basePrice : null;
 

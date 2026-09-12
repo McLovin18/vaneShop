@@ -2,6 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import admin from "../../../lib/firebase-admin";
 import { deducirStockOrden } from "../../../lib/ordenes-db";
 import { Resend } from "resend";
+import { getSnapshotPricing } from "../../../lib/pricing";
+import { obtenerAtributos } from "../../../lib/atributos-db";
+
+// Helper function to get variation text for display
+async function getVariationText(p: any, atributosMap: Record<string, string>): Promise<string> {
+  const parts: string[] = [];
+  
+  // Mostrar variaciones seleccionadas (formato: ID atributo -> valor)
+  if (p.selectedVariations && typeof p.selectedVariations === 'object') {
+    Object.entries(p.selectedVariations).forEach(([attrId, value]) => {
+      if (value) {
+        const attrName = atributosMap[attrId] || attrId;
+        parts.push(`${attrName}: ${value}`);
+      }
+    });
+  }
+  
+  // Mostrar variación personalizada si existe
+  if (p.variacionPersonalizada && typeof p.variacionPersonalizada === 'string' && p.variacionPersonalizada.trim()) {
+    parts.push(`Variación: ${p.variacionPersonalizada.trim()}`);
+  }
+  
+  // Mostrar valores de personalización si existen
+  if (p.personalizacionValues && typeof p.personalizacionValues === 'object') {
+    Object.entries(p.personalizacionValues).forEach(([campoId, valor]) => {
+      if (valor && typeof valor === 'string' && valor.trim()) {
+        const campoName = atributosMap[campoId] || campoId;
+        parts.push(`${campoName}: ${valor.trim()}`);
+      }
+    });
+  }
+  
+  return parts.length > 0 ? `<br><span style="font-size:12px;color:#666;">${parts.join(' | ')}</span>` : '';
+}
 
 /**
  * ✅ ENDPOINT: Aprobar orden de transferencia
@@ -182,7 +216,14 @@ async function enviarCorreoAprobacionCliente(orden: any) {
       return;
     }
 
-    const emailHTML = buildAprobacionClienteEmailHTML(orden);
+    // Cargar atributos para mostrar nombres en lugar de IDs
+    const atributos = await obtenerAtributos();
+    const atributosMap: Record<string, string> = {};
+    atributos.forEach((attr: any) => {
+      atributosMap[attr.id] = attr.nombre;
+    });
+
+    const emailHTML = await buildAprobacionClienteEmailHTML(orden, atributosMap);
 
     await resend.emails.send({
       from: fromEmail,
@@ -217,7 +258,14 @@ async function enviarCorreoAprobacionDueño(orden: any) {
     const ownerEmail = process.env.OWNER_EMAIL || "soporte@vanessashop.com";
     const fromEmail = process.env.RESEND_FROM_EMAIL || "pedidos@vanessashop.com";
 
-    const emailHTML = buildAprobacionDueñoEmailHTML(orden);
+    // Cargar atributos para mostrar nombres en lugar de IDs
+    const atributos = await obtenerAtributos();
+    const atributosMap: Record<string, string> = {};
+    atributos.forEach((attr: any) => {
+      atributosMap[attr.id] = attr.nombre;
+    });
+
+    const emailHTML = await buildAprobacionDueñoEmailHTML(orden, atributosMap);
 
     await resend.emails.send({
       from: fromEmail,
@@ -235,7 +283,7 @@ async function enviarCorreoAprobacionDueño(orden: any) {
   }
 }
 
-function buildAprobacionClienteEmailHTML(orden: any): string {
+async function buildAprobacionClienteEmailHTML(orden: any, atributosMap: Record<string, string>): Promise<string> {
   return `
 <!DOCTYPE html>
 <html>
@@ -301,15 +349,19 @@ function buildAprobacionClienteEmailHTML(orden: any): string {
                 <tbody>
                   ${
                     orden.productos && Array.isArray(orden.productos)
-                      ? orden.productos.map((p: any) => `
+                      ? (await Promise.all(orden.productos.map(async (p: any) => {
+                          const { finalPrice } = getSnapshotPricing(p);
+                          const variationText = await getVariationText(p, atributosMap);
+                          return `
                         <tr style="border-bottom:1px solid #e5e7eb;">
                           <td style="padding:12px 8px;font-size:13px;color:#374151;">
-                            <strong>${p.nombre || "Producto"}</strong>
+                            <strong>${p.nombre || "Producto"}</strong>${variationText}
                           </td>
                           <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
-                          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#10b981;">$${(p.subtotal || 0).toFixed(2)}</td>
+                          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#10b981;">$${(finalPrice * (p.cantidad || 1)).toFixed(2)}</td>
                         </tr>
-                      `).join('')
+                      `;
+                        }))).join('')
                       : "<tr><td colspan=3 style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>"
                   }
                 </tbody>
@@ -324,11 +376,15 @@ function buildAprobacionClienteEmailHTML(orden: any): string {
             <div style="background:#f9fafb;border-radius:8px;padding:16px;">
               <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
                 <span style="color:#666;">Subtotal:</span>
-                <span style="color:#1f2937;font-weight:bold;">$${(orden.total || 0).toFixed(2)}</span>
+                <span style="color:#1f2937;font-weight:bold;">$${(orden.productos && Array.isArray(orden.productos) ? orden.productos.reduce((sum: number, p: any) => { const { finalPrice } = getSnapshotPricing(p); return sum + finalPrice * (p.cantidad || 1); }, 0) : 0).toFixed(2)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
+                <span style="color:#666;">Envío:</span>
+                <span style="color:#1f2937;font-weight:bold;">$${(orden.costoEnvio || 0).toFixed(2)}</span>
               </div>
               <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid #e5e7eb;font-size:16px;font-weight:bold;">
                 <span style="color:#1f2937;">Total:</span>
-                <span style="color:#10b981;">$${(orden.total || 0).toFixed(2)}</span>
+                <span style="color:#10b981;">$${((orden.productos && Array.isArray(orden.productos) ? orden.productos.reduce((sum: number, p: any) => { const { finalPrice } = getSnapshotPricing(p); return sum + finalPrice * (p.cantidad || 1); }, 0) : 0) + (orden.costoEnvio || 0)).toFixed(2)}</span>
               </div>
             </div>
           </td>
@@ -366,7 +422,7 @@ function buildAprobacionClienteEmailHTML(orden: any): string {
   `.trim();
 }
 
-function buildAprobacionDueñoEmailHTML(orden: any): string {
+async function buildAprobacionDueñoEmailHTML(orden: any, atributosMap: Record<string, string>): Promise<string> {
   const userInfo = orden.transferenciaInfo || {};
 
   return `
@@ -447,15 +503,19 @@ function buildAprobacionDueñoEmailHTML(orden: any): string {
                 <tbody>
                   ${
                     orden.productos && Array.isArray(orden.productos)
-                      ? orden.productos.map((p: any) => `
+                      ? (await Promise.all(orden.productos.map(async (p: any) => {
+                          const { finalPrice } = getSnapshotPricing(p);
+                          const variationText = await getVariationText(p, atributosMap);
+                          return `
                         <tr style="border-bottom:1px solid #e5e7eb;">
                           <td style="padding:12px 8px;font-size:13px;color:#374151;">
-                            <strong>${p.nombre || "Producto"}</strong>
+                            <strong>${p.nombre || "Producto"}</strong>${variationText}
                           </td>
                           <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
-                          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#10b981;">$${(p.subtotal || 0).toFixed(2)}</td>
+                          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#10b981;">$${(finalPrice * (p.cantidad || 1)).toFixed(2)}</td>
                         </tr>
-                      `).join('')
+                      `;
+                        }))).join('')
                       : "<tr><td colspan=3 style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>"
                   }
                 </tbody>
@@ -470,11 +530,15 @@ function buildAprobacionDueñoEmailHTML(orden: any): string {
             <div style="background:#f9fafb;border-radius:8px;padding:16px;">
               <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
                 <span style="color:#666;">Subtotal:</span>
-                <span style="color:#1f2937;font-weight:bold;">$${(orden.total || 0).toFixed(2)}</span>
+                <span style="color:#1f2937;font-weight:bold;">$${(orden.productos && Array.isArray(orden.productos) ? orden.productos.reduce((sum: number, p: any) => { const { finalPrice } = getSnapshotPricing(p); return sum + finalPrice * (p.cantidad || 1); }, 0) : 0).toFixed(2)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
+                <span style="color:#666;">Envío:</span>
+                <span style="color:#1f2937;font-weight:bold;">$${(orden.costoEnvio || 0).toFixed(2)}</span>
               </div>
               <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid #e5e7eb;font-size:16px;font-weight:bold;">
                 <span style="color:#1f2937;">Total:</span>
-                <span style="color:#10b981;">$${(orden.total || 0).toFixed(2)}</span>
+                <span style="color:#10b981;">$${((orden.productos && Array.isArray(orden.productos) ? orden.productos.reduce((sum: number, p: any) => { const { finalPrice } = getSnapshotPricing(p); return sum + finalPrice * (p.cantidad || 1); }, 0) : 0) + (orden.costoEnvio || 0)).toFixed(2)}</span>
               </div>
             </div>
           </td>

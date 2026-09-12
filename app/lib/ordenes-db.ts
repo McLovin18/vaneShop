@@ -76,9 +76,28 @@ export async function crearOrden(orden: any) {
     const data = productDataMap.get(item.id);
     if (!data) continue;
 
-    const { basePrice, discount, hasDiscount, finalPrice } = getCatalogPricing(data);
+    // Usar precioUnitario del carrito si existe (ya incluye variaciones), si no recalcular
+    let unitPrice: number;
+    let basePrice: number;
+    let discount: number;
+    let hasDiscount: boolean;
+
+    if (item.precioUnitario && !isNaN(Number(item.precioUnitario))) {
+      // Usar precio del carrito (ya tiene el precio correcto de la variación)
+      unitPrice = Number(item.precioUnitario);
+      basePrice = Number(item.precioBase || data.precioBase || data.precio || 0);
+      discount = Number(item.descuento || 0);
+      hasDiscount = discount > 0 && discount < 100;
+    } else {
+      // Fallback: recalcular desde la base de datos
+      const pricing = getCatalogPricing(data);
+      basePrice = pricing.basePrice;
+      discount = pricing.discount;
+      hasDiscount = pricing.hasDiscount;
+      unitPrice = pricing.finalPrice;
+    }
+
     const cantidad = Number(item.cantidad || 1);
-    const unitPrice = finalPrice;
     const lineTotal = unitPrice * cantidad;
 
     // ⚠️ VALIDACIÓN: Stock disponible (anti-overselling)
@@ -117,6 +136,11 @@ export async function crearOrden(orden: any) {
       subtotal: lineTotal,
       bodegaId: data.bodegaId || "technothings",
       tiempoEntrega, // Tiempo de entrega en horas
+      // Información de variación (si existe)
+      selectedVariations: item.selectedVariations || null,
+      variationAttributeIds: item.variationAttributeIds || null,
+      variacionPersonalizada: item.variacionPersonalizada || null,
+      personalizacionValues: item.personalizacionValues || null,
       // 🔒 SNAPSHOT de seguridad
       precioSnapshot: {
         base: basePrice,
