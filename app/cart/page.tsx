@@ -64,6 +64,7 @@ export default function CartPage() {
 
   // Modal de transferencia
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [transferencia, setTransferencia] = useState({
     nombre: "",
     telefono: "",
@@ -239,21 +240,25 @@ export default function CartPage() {
   const handleTransferirPago = async () => {
     try {
       setError("");
+      setIsSubmitting(true);
       
       // Validaciones
       if (!transferencia.nombre || !transferencia.telefono || !transferencia.correo || !transferencia.cuentaBancariaId || !transferencia.evidencia) {
         setError("Por favor completa todos los campos");
+        setIsSubmitting(false);
         return;
       }
 
       if (!direccionEnvio || direccionEnvio.trim() === "") {
         setError("Por favor ingresa tu dirección de entrega.");
+        setIsSubmitting(false);
         return;
       }
 
       // Validar email
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(transferencia.correo)) {
         setError("Correo electrónico inválido");
+        setIsSubmitting(false);
         return;
       }
 
@@ -321,6 +326,8 @@ export default function CartPage() {
 
     } catch (error: any) {
       setError(error.message || "Error al procesar la transferencia");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -657,10 +664,17 @@ export default function CartPage() {
               
               <button
                 onClick={handleTransferirPago}
-                disabled={!transferencia.nombre || !transferencia.telefono || !transferencia.correo || !transferencia.cuentaBancariaId || !transferencia.evidencia}
-                className="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!transferencia.nombre || !transferencia.telefono || !transferencia.correo || !transferencia.cuentaBancariaId || !transferencia.evidencia || isSubmitting}
+                className="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed touch-action-manipulation"
               >
-                Enviar Transacción
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="material-icons-round animate-spin">refresh</span>
+                    Procesando...
+                  </span>
+                ) : (
+                  "Enviar Transacción"
+                )}
               </button>
             </div>
           </div>
