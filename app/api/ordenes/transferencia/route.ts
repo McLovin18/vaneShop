@@ -1,0 +1,478 @@
+import { NextRequest, NextResponse } from "next/server";
+import { crearOrden } from "../../../lib/ordenes-db";
+import { Resend } from "resend";
+
+/**
+ * 📧 ENDPOINT: Procesar pago por transferencia
+ * 
+ * Procesa una orden con pago por transferencia bancaria
+ * Sube la evidencia de pago y crea la orden
+ * Envía correo al dueño con la información
+ */
+
+export async function POST(req: NextRequest) {
+  try {
+    const formData = await req.formData();
+    const evidencia = formData.get('evidencia') as File;
+    const ordenData = JSON.parse(formData.get('ordenData') as string);
+
+    // Validaciones
+    if (!evidencia || !ordenData) {
+      return NextResponse.json(
+        { error: "Faltan datos requeridos" },
+        { status: 400 }
+      );
+    }
+
+    // Validar que sea una imagen
+    if (!evidencia.type.startsWith('image/')) {
+      return NextResponse.json(
+        { error: "El archivo debe ser una imagen" },
+        { status: 400 }
+      );
+    }
+
+    // Validar tamaño máximo (5MB)
+    if (evidencia.size > 5 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: "La imagen no puede exceder 5MB" },
+        { status: 400 }
+      );
+    }
+
+    // Convertir imagen a base64 para guardar en Firestore
+    const bytes = await evidencia.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const evidenciaBase64 = `data:${evidencia.type};base64,${buffer.toString('base64')}`;
+
+    // Agregar evidencia a la orden
+    ordenData.transferenciaInfo.evidencia = evidenciaBase64;
+    ordenData.transferenciaInfo.evidenciaTipo = evidencia.type;
+    ordenData.estado = "pendiente_aprobacion";
+
+    // Crear la orden
+    const orden = await crearOrden(ordenData);
+
+    // Enviar correo al dueño
+    await enviarCorreoAlDueño(orden);
+
+    // Enviar correo al cliente
+    await enviarCorreoAlCliente(orden);
+
+    return NextResponse.json({
+      success: true,
+      orderId: orden.orderId,
+      orden,
+      message: "Orden creada exitosamente"
+    });
+
+  } catch (error: any) {
+    console.error("[TRANSFERENCIA] Error:", error);
+    return NextResponse.json(
+      { error: error.message || "Error al procesar la transferencia" },
+      { status: 500 }
+    );
+  }
+}
+
+async function enviarCorreoAlDueño(orden: any) {
+  try {
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+      console.error("[TRANSFERENCIA] ❌ RESEND_API_KEY no configurado - No se puede enviar correo al dueño");
+      return;
+    }
+
+    const ownerEmail = process.env.OWNER_EMAIL;
+    if (!ownerEmail) {
+      console.error("[TRANSFERENCIA] ❌ OWNER_EMAIL no configurado - No se puede enviar correo al dueño");
+      return;
+    }
+
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "pedidos@vanessashop.com";
+
+    console.log(`[TRANSFERENCIA] Enviando correo al dueño: ${ownerEmail} para orden ${orden.orderId}`);
+
+    const resend = new Resend(resendApiKey);
+    const emailHTML = buildTransferenciaEmailHTML(orden);
+
+    const emailResponse = await resend.emails.send({
+      from: fromEmail,
+      to: ownerEmail,
+      subject: `Nueva transferencia pendiente - Orden ${orden.orderId}`,
+      html: emailHTML,
+      replyTo: orden.transferenciaInfo?.correo || orden.userEmail,
+    });
+
+    if (emailResponse.error) {
+      console.error("[TRANSFERENCIA] ❌ Error de Resend al enviar correo al dueño:", emailResponse.error);
+      throw new Error(emailResponse.error?.message || "Error de Resend");
+    }
+
+    console.log(`✅ [TRANSFERENCIA_EMAIL] Orden ${orden.orderId} enviada a ${ownerEmail} - Resend ID: ${emailResponse.data?.id}`);
+
+  } catch (error) {
+    console.error("[TRANSFERENCIA] ❌ Error enviando correo al dueño:", error);
+    throw error; // Re-lanzar para que se capture en el try principal
+  }
+}
+
+async function enviarCorreoAlCliente(orden: any) {
+  try {
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+      console.error("[TRANSFERENCIA] ❌ RESEND_API_KEY no configurado - No se puede enviar correo al cliente");
+      return;
+    }
+
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "pedidos@vanessashop.com";
+    const customerEmail = orden.transferenciaInfo?.correo || orden.userEmail;
+
+    if (!customerEmail) {
+      console.error("[TRANSFERENCIA] ❌ No hay correo del cliente - No se puede enviar notificación");
+      return;
+    }
+
+    console.log(`[TRANSFERENCIA] Enviando correo al cliente: ${customerEmail} para orden ${orden.orderId}`);
+
+    const resend = new Resend(resendApiKey);
+    const emailHTML = buildClienteEmailHTML(orden);
+
+    const emailResponse = await resend.emails.send({
+      from: fromEmail,
+      to: customerEmail,
+      subject: `Confirmación de pedido ${orden.orderId} - VaneShop`,
+      html: emailHTML,
+      replyTo: fromEmail,
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'high',
+      },
+    });
+
+    if (emailResponse.error) {
+      console.error("[TRANSFERENCIA] ❌ Error de Resend al enviar correo al cliente:", emailResponse.error);
+      throw new Error(emailResponse.error?.message || "Error de Resend");
+    }
+
+    console.log(`✅ [TRANSFERENCIA_CLIENTE_EMAIL] Orden ${orden.orderId} enviada a ${customerEmail} - Resend ID: ${emailResponse.data?.id}`);
+
+  } catch (error) {
+    console.error("[TRANSFERENCIA] ❌ Error enviando correo al cliente:", error);
+    throw error; // Re-lanzar para que se capture en el try principal
+  }
+}
+
+function buildTransferenciaEmailHTML(orden: any): string {
+  const cuentaInfo = orden.transferenciaInfo?.cuentaInfo || {};
+  const userInfo = orden.transferenciaInfo || {};
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+</head>
+<body style="font-family:Arial,sans-serif;background:#f3f4f6;margin:0;padding:20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:white;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+    <tr>
+      <td>
+        <!-- Header con gradiente verde -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);border-radius:12px 12px 0 0;">
+          <tr>
+            <td style="padding:32px;text-align:center;color:white;">
+              <h1 style="margin:0 0 8px;font-size:28px;font-weight:bold;">💰 Nueva Transferencia</h1>
+              <p style="margin:0;font-size:14px;opacity:0.9;">Orden pendiente de aprobación</p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Número de orden -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:24px 36px;">
+              <div style="background:#f0fdf4;border-left:4px solid #10b981;padding:16px;border-radius:4px;">
+                <p style="margin:0 0 4px;font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;">Número de orden</p>
+                <p style="margin:0;font-size:24px;font-weight:bold;color:#10b981;">${orden.orderId || "N/A"}</p>
+                <p style="margin:8px 0 0;font-size:13px;color:#666;">Fecha: ${orden.createdAt ? new Date(orden.createdAt).toLocaleDateString("es-ES") : "N/A"}</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Información del cliente -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:0 36px 24px;">
+              <h2 style="margin:0 0 12px;font-size:16px;font-weight:bold;color:#1f2937;">Información del cliente</h2>
+              <div style="background:#f9fafb;border-radius:8px;padding:16px;">
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Nombre:</strong> ${userInfo.nombre || "N/A"}</p>
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Teléfono:</strong> ${userInfo.telefono || "N/A"}</p>
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Correo:</strong> ${userInfo.correo || "N/A"}</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Información de envío -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:0 36px 24px;">
+              <h2 style="margin:0 0 12px;font-size:16px;font-weight:bold;color:#1f2937;">Información de envío</h2>
+              <div style="background:#f9fafb;border-radius:8px;padding:16px;">
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Ciudad:</strong> ${orden.ciudadEntrega || "N/A"}</p>
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Zona:</strong> ${orden.zonaEntrega || "N/A"}</p>
+                <p style="margin:0;font-size:14px;color:#374151;"><strong>Dirección:</strong> ${orden.direccionEnvio || "N/A"}</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Información de transferencia -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:0 36px 24px;">
+              <h2 style="margin:0 0 12px;font-size:16px;font-weight:bold;color:#1f2937;">Información de transferencia</h2>
+              <div style="background:#f9fafb;border-radius:8px;padding:16px;">
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Banco:</strong> ${cuentaInfo.banco || "N/A"}</p>
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Tipo:</strong> ${cuentaInfo.tipo || "N/A"}</p>
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Número de cuenta:</strong> ${cuentaInfo.numeroCuenta || "N/A"}</p>
+                <p style="margin:0;font-size:14px;color:#374151;"><strong>Para transferir a:</strong> ${cuentaInfo.nombreParaTransferencia || "N/A"}</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Evidencia de pago -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:0 36px 24px;">
+              <h2 style="margin:0 0 12px;font-size:16px;font-weight:bold;color:#1f2937;">Evidencia de pago</h2>
+              <div style="background:#f9fafb;border-radius:8px;padding:16px;text-align:center;">
+                ${orden.transferenciaInfo?.evidencia ? 
+                  `<img src="${orden.transferenciaInfo.evidencia}" alt="Evidencia de pago" style="max-width:100%;border-radius:8px;">` : 
+                  '<p style="margin:0;color:#666;">No se adjuntó evidencia</p>'
+                }
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Resumen de productos -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:0 36px 24px;">
+              <h2 style="margin:0 0 12px;font-size:16px;font-weight:bold;color:#1f2937;">Resumen del pedido</h2>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <thead>
+                  <tr style="background:#f3f4f6;border-bottom:2px solid #e5e7eb;">
+                    <th style="padding:12px 8px;text-align:left;font-size:13px;font-weight:bold;color:#374151;">Producto</th>
+                    <th style="padding:12px 8px;text-align:center;font-size:13px;font-weight:bold;color:#374151;width:60px;">Cant.</th>
+                    <th style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#374151;width:100px;">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${
+                    orden.productos && Array.isArray(orden.productos)
+                      ? orden.productos.map((p: any) => `
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                          <td style="padding:12px 8px;font-size:13px;color:#374151;">
+                            <strong>${p.nombre || "Producto"}</strong>
+                          </td>
+                          <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
+                          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#10b981;">$${(p.subtotal || 0).toFixed(2)}</td>
+                        </tr>
+                      `).join('')
+                      : "<tr><td colspan=3 style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>"
+                  }
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Totales -->
+        <tr>
+          <td style="padding:0 36px 24px;">
+            <div style="background:#f9fafb;border-radius:8px;padding:16px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
+                <span style="color:#666;">Subtotal:</span>
+                <span style="color:#1f2937;font-weight:bold;">$${(orden.total || 0).toFixed(2)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid #e5e7eb;font-size:16px;font-weight:bold;">
+                <span style="color:#1f2937;">Total:</span>
+                <span style="color:#10b981;">$${(orden.total || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Call to action -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:0 36px 24px;">
+              <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:16px 20px;">
+                <p style="margin:0 0 12px;font-size:14px;color:#92400e;font-weight:bold;">⚠️ Requerido: Revisión</p>
+                <p style="margin:0 0 8px;font-size:14px;color:#92400e;">
+                  Revisa la evidencia de pago y la información del cliente en el panel de administración.
+                </p>
+                <p style="margin:0;font-size:14px;color:#92400e;">
+                  <strong>Acciones:</strong> Aprobar o rechazar la orden según corresponda.
+                </p>
+                <p style="margin:12px 0 0;font-size:13px;color:#92400e;">
+                  <a href="${process.env.NEXT_PUBLIC_DOMAIN || "https://vaneshop.com"}/admin/pedidos" style="color:#92400e;font-weight:bold;text-decoration:none;">Ir al panel de administración</a>
+                </p>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f9fafb;padding:20px 36px;text-align:center;border-top:1px solid #e5e7eb;border-radius:0 0 12px 12px;">
+            <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;">Este correo fue enviado automáticamente por VaneShop</p>
+            <p style="margin:0;font-size:11px;color:#d1d5db;">© ${new Date().getFullYear()} VanessaShop. Todos los derechos reservados.</p>
+          </td>
+        </tr>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+function buildClienteEmailHTML(orden: any): string {
+  const userInfo = orden.transferenciaInfo || {};
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+</head>
+<body style="font-family:Arial,sans-serif;background:#f3f4f6;margin:0;padding:20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:white;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+    <tr>
+      <td>
+        <!-- Header con gradiente azul -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);border-radius:12px 12px 0 0;">
+          <tr>
+            <td style="padding:32px;text-align:center;color:white;">
+              <h1 style="margin:0 0 8px;font-size:28px;font-weight:bold;">🛍️ Tu pedido ha sido recibido</h1>
+              <p style="margin:0;font-size:14px;opacity:0.9;">Orden pendiente de aprobación</p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Número de orden -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:24px 36px;">
+              <div style="background:#eff6ff;border-left:4px solid #3b82f6;padding:16px;border-radius:4px;">
+                <p style="margin:0 0 4px;font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;">Número de orden</p>
+                <p style="margin:0;font-size:24px;font-weight:bold;color:#3b82f6;">${orden.orderId || "N/A"}</p>
+                <p style="margin:8px 0 0;font-size:13px;color:#666;">Fecha: ${orden.createdAt ? new Date(orden.createdAt).toLocaleDateString("es-ES") : "N/A"}</p>
+                <p style="margin:8px 0 0;font-size:13px;color:#666;">Estado: <strong>Pendiente de aprobación</strong></p>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Información de envío -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:0 36px 24px;">
+              <h2 style="margin:0 0 12px;font-size:16px;font-weight:bold;color:#1f2937;">Información de envío</h2>
+              <div style="background:#f9fafb;border-radius:8px;padding:16px;">
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Ciudad:</strong> ${orden.ciudadEntrega || "N/A"}</p>
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Zona:</strong> ${orden.zonaEntrega || "N/A"}</p>
+                <p style="margin:0;font-size:14px;color:#374151;"><strong>Dirección:</strong> ${orden.direccionEnvio || "N/A"}</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Resumen de productos -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:0 36px 24px;">
+              <h2 style="margin:0 0 12px;font-size:16px;font-weight:bold;color:#1f2937;">Resumen del pedido</h2>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <thead>
+                  <tr style="background:#f3f4f6;border-bottom:2px solid #e5e7eb;">
+                    <th style="padding:12px 8px;text-align:left;font-size:13px;font-weight:bold;color:#374151;">Producto</th>
+                    <th style="padding:12px 8px;text-align:center;font-size:13px;font-weight:bold;color:#374151;width:60px;">Cant.</th>
+                    <th style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#374151;width:100px;">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${
+                    orden.productos && Array.isArray(orden.productos)
+                      ? orden.productos.map((p: any) => `
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                          <td style="padding:12px 8px;font-size:13px;color:#374151;">
+                            <strong>${p.nombre || "Producto"}</strong>
+                          </td>
+                          <td style="padding:12px 8px;text-align:center;font-size:13px;color:#374151;">${p.cantidad}</td>
+                          <td style="padding:12px 8px;text-align:right;font-size:13px;font-weight:bold;color:#3b82f6;">$${(p.subtotal || 0).toFixed(2)}</td>
+                        </tr>
+                      `).join('')
+                      : "<tr><td colspan=3 style='padding:12px;text-align:center;color:#999;'>No hay productos</td></tr>"
+                  }
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Totales -->
+        <tr>
+          <td style="padding:0 36px 24px;">
+            <div style="background:#f9fafb;border-radius:8px;padding:16px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;">
+                <span style="color:#666;">Subtotal:</span>
+                <span style="color:#1f2937;font-weight:bold;">$${(orden.total || 0).toFixed(2)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid #e5e7eb;font-size:16px;font-weight:bold;">
+                <span style="color:#1f2937;">Total:</span>
+                <span style="color:#3b82f6;">$${(orden.total || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Información importante -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:0 36px 24px;">
+              <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:16px 20px;">
+                <p style="margin:0 0 12px;font-size:14px;color:#92400e;font-weight:bold;">⏳ Próximos pasos</p>
+                <p style="margin:0 0 8px;font-size:14px;color:#92400e;">
+                  Tu pedido está siendo revisado. Te notificaremos cuando sea aprobado.
+                </p>
+                <p style="margin:0;font-size:14px;color:#92400e;">
+                  El tiempo de estimación de aprobación es de 24-48 horas hábiles.
+                </p>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f9fafb;padding:20px 36px;text-align:center;border-top:1px solid #e5e7eb;border-radius:0 0 12px 12px;">
+            <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;">Este correo fue enviado automáticamente por VaneShop</p>
+            <p style="margin:0;font-size:11px;color:#d1d5db;">© ${new Date().getFullYear()} VaneShop. Todos los derechos reservados.</p>
+          </td>
+        </tr>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}

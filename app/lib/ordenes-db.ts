@@ -134,7 +134,10 @@ export async function crearOrden(orden: any) {
     total,
     orderId,
     estado: orden.estado || "generada",
+    metodoPago: orden.metodoPago || "whatsapp",
     createdAt: Timestamp.now(),
+    // Información de transferencia (si aplica)
+    transferenciaInfo: orden.transferenciaInfo || null,
   };
   const docRef = await addDoc(collection(db, COLLECTION), payload);
   return { ...payload, id: docRef.id };

@@ -18,16 +18,16 @@ import admin from "../../../lib/firebase-admin";
  * Verify admin authentication token
  * @param req - Next.js request
  * @returns true if token is valid, false otherwise
- * 
+ *
  * Token debe enviarse en header: x-admin-token: <token>
- * Token esperado está en env var: ADMIN_REJECT_TOKEN
+ * Token esperado está en env var: NEXT_PUBLIC_ADMIN_TOKEN
  */
 function verifyAdminToken(req: NextRequest): boolean {
   const tokenFromRequest = req.headers.get("x-admin-token");
-  const tokenExpected = process.env.ADMIN_REJECT_TOKEN;
+  const tokenExpected = process.env.NEXT_PUBLIC_ADMIN_TOKEN;
 
   if (!tokenExpected) {
-    console.error("[SECURITY] ADMIN_REJECT_TOKEN no configurado en variables de entorno");
+    console.error("[SECURITY] NEXT_PUBLIC_ADMIN_TOKEN no configurado en variables de entorno");
     return false;
   }
 
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     // ─────── ENCONTRAR LA ORDEN ───────
     let orderDoc: any = null;
-    let orderRef: FirebaseFirestore.DocumentReference = null;
+    let orderRef: FirebaseFirestore.DocumentReference | null = null;
 
     if (orderId.startsWith("ord-")) {
       // Buscar por orderId
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
         .where("orderId", "==", orderId)
         .limit(1);
       const snaps = await query.get();
-      
+
       if (!snaps.empty) {
         orderDoc = snaps.docs[0].data();
         orderRef = snaps.docs[0].ref;
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (!orderDoc) {
+    if (!orderDoc || !orderRef) {
       return NextResponse.json(
         { error: `Orden ${orderId} no encontrada` },
         { status: 404 }

@@ -59,7 +59,7 @@ function buildOrderEmailHTML(orden: any): string {
 <body>
   <div class="container">
     <div class="header">
-      <h1>🛍️ TecnoThings</h1>
+      <h1>🛍️ VaneShop</h1>
       <p>Tu orden ha sido recibida</p>
     </div>
     
@@ -131,8 +131,8 @@ function buildOrderEmailHTML(orden: any): string {
     </div>
 
     <div class="footer">
-      <p>Este correo fue enviado automáticamente por TecnoThings</p>
-      <p class="footer-small">© ${new Date().getFullYear()} TecnoThings. Todos los derechos reservados.</p>
+      <p>Este correo fue enviado automáticamente por VanessaShop</p>
+      <p class="footer-small">© ${new Date().getFullYear()} VanessaShop. Todos los derechos reservados.</p>
     </div>
   </div>
 </body>
@@ -329,11 +329,11 @@ export async function POST(req: NextRequest) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         const emailResponse = await resend.emails.send({
-          from: "pedidos@tecnothings.com",
+          from: "pedidos@vanessashop.com",
           to: resultado.email,
-          subject: `Tu pedido ${resultado.orderId} ha sido recibido — TecnoThings`,
+          subject: `Tu pedido ${resultado.orderId} ha sido recibido — VanessaShop`,
           html: buildOrderEmailHTML(resultado),
-          replyTo: "soporte@tecnothings.com",
+          replyTo: "soporte@vanessashop.com",
         });
 
         if (emailResponse.error) {

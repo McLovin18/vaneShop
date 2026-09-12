@@ -6,6 +6,8 @@ import { useUser } from "../context/UserContext";
 const adminItems = [
   { name: "Dashboard", path: "/admin", icon: "dashboard" },
   { name: "Inventario", path: "/admin/inventario", icon: "inventory" },
+  { name: "Órdenes", path: "/admin/pedidos", icon: "receipt" },
+  { name: "Cuentas", path: "/admin/cuentas-bancarias", icon: "account_balance" },
   { name: "Landing", path: "/admin/edit-landing", icon: "edit" },
   { name: "Blogs", path: "/admin/edit-blogs", icon: "library_books" },
   { name: "Perfil", path: "/admin/perfil", icon: "person" },

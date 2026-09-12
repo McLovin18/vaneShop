@@ -20,7 +20,7 @@ export default function PedidosAdminPage() {
 	const [clientesMap, setClientesMap] = useState<Record<string, { displayName: string | null; email: string | null }>>({});
 	const [fechaDesde, setFechaDesde] = useState<string>("");
 	const [fechaHasta, setFechaHasta] = useState<string>("");
-	const [expandedTarjetas, setExpandedTarjetas] = useState(false);
+	const [expandedTarjetas, setExpandedTarjetas] = useState<Record<string, boolean>>({});
 
 	const loadOrdenes = async () => {
 		setLoading(true);
@@ -44,7 +44,9 @@ export default function PedidosAdminPage() {
 			const res = await fetch("/api/admin/ordenes", {
 				headers: {
 					"Authorization": `Bearer ${token}`,
+					"Cache-Control": "no-cache",
 				},
+				cache: "no-store",
 			});
 
 			console.log("🔍 Response status:", res.status);
@@ -124,11 +126,34 @@ export default function PedidosAdminPage() {
 		try {
 			setLoading(true);
 
-			// Deducir stock cuando se aprueba y actualizar estado
-			await deducirStockOrden(orden.id);
-			await actualizarOrden(orden.id, { estado: "aprobada" });
-			setOrdenes((prev) => prev.map((o) => o.id === orden.id ? { ...o, estado: "aprobada" } : o));
-			alert("✅ Orden aprobada exitosamente");
+			// Usar endpoint de aprobación para transferencias
+			if (orden.metodoPago === "transferencia" && orden.estado === "pendiente_aprobacion") {
+				const res = await fetch("/api/admin/approve-order", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"x-admin-token": process.env.NEXT_PUBLIC_ADMIN_TOKEN || "",
+					},
+					body: JSON.stringify({
+						orderId: orden.id,
+					}),
+				});
+
+				if (!res.ok) {
+					const error = await res.json();
+					throw new Error(error.error || `Error ${res.status}`);
+				}
+
+				const data = await res.json();
+				setOrdenes((prev) => prev.map((o) => o.id === orden.id ? { ...o, estado: "aprobada" } : o));
+				alert(`✅ ${data.message || "Orden aprobada exitosamente"}`);
+			} else {
+				// Aprobación tradicional para órdenes de WhatsApp
+				await deducirStockOrden(orden.id);
+				await actualizarOrden(orden.id, { estado: "aprobada" });
+				setOrdenes((prev) => prev.map((o) => o.id === orden.id ? { ...o, estado: "aprobada" } : o));
+				alert("✅ Orden aprobada exitosamente");
+			}
 		} catch (error: any) {
 			console.error("Error al aprobar orden:", error);
 			alert(`❌ Error: ${error.message || "No se pudo aprobar la orden"}`);
@@ -217,7 +242,7 @@ export default function PedidosAdminPage() {
 	};
 
 	const ordenesPendientes = ordenes.filter((o) =>
-		(o.estado === "generada" || o.estado === "pendiente_pago" || o.estado === "pago_fallido") &&
+		(o.estado === "generada" || o.estado === "pendiente_pago" || o.estado === "pago_fallido" || o.estado === "pendiente_aprobacion") &&
 		estaEnRango(o.visitaFecha) &&
 		matchesBusqueda(o)
 	);
@@ -234,11 +259,12 @@ export default function PedidosAdminPage() {
 
 	const estadoBadge = (estado: string) => {
 		const map: Record<string, { label: string; className: string }> = {
-			generada:       { label: "✔ Generada",        className: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" },
-			aprobada:       { label: "✅ Aprobada",        className: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" },
-			pendiente_pago: { label: "⏳ Pago pendiente",  className: "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300" },
-			pago_fallido:   { label: "❌ Pago fallido",    className: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" },
-			rechazada:      { label: "🚫 Rechazada",       className: "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300" },
+			generada:              { label: "✔ Generada",              className: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" },
+			aprobada:              { label: "✅ Aprobada",              className: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" },
+			pendiente_pago:        { label: "⏳ Pago pendiente",        className: "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300" },
+			pendiente_aprobacion:  { label: "⏳ Pendiente aprobación",  className: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300" },
+			pago_fallido:          { label: "❌ Pago fallido",          className: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" },
+			rechazada:             { label: "🚫 Rechazada",             className: "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300" },
 		};
 		const config = map[estado] || { label: estado, className: "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300" };
 		return (
@@ -275,20 +301,38 @@ export default function PedidosAdminPage() {
 		return <span className="text-xs text-slate-400">Cliente invitado</span>;
 	};
 
-	const OrdenCard = ({ orden }: { orden: any }) => (
+	const OrdenCard = ({ orden }: { orden: any }) => {
+		const isExpanded = expandedTarjetas[orden.id] || false;
+		const toggleExpand = () => {
+			setExpandedTarjetas(prev => ({
+				...prev,
+				[orden.id]: !prev[orden.id]
+			}));
+		};
+
+		return (
 		<div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 hover:shadow-md transition-shadow">
-			{/* Header */}
+			{/* Header - Vista general */}
 			<div className="flex justify-between items-start mb-3 flex-wrap gap-2">
 				<div className="flex items-center gap-2">
 					<span className="font-bold text-lg text-slate-800 dark:text-slate-100">
 						{orden.orderId || `#${orden.id.slice(-6)}`}
 					</span>
-					{/* payment method badge removed (Stripe not used) */}
+					{/* Método de pago badge */}
+					{orden.metodoPago && (
+						<span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+							orden.metodoPago === "transferencia"
+								? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
+								: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
+						}`}>
+							{orden.metodoPago === "transferencia" ? "💰 Transferencia" : "📱 WhatsApp"}
+						</span>
+					)}
 				</div>
 				{estadoBadge(orden.estado)}
 			</div>
 
-			{/* Info */}
+			{/* Info básica */}
 			<div className="space-y-1 mb-3 text-sm text-slate-600 dark:text-slate-300">
 				<div>
 					{clienteBadge(orden)}
@@ -298,113 +342,152 @@ export default function PedidosAdminPage() {
 						? orden.createdAt.toDate().toLocaleString()
 						: (orden.createdAt ? String(orden.createdAt) : "—")}
 				</div>
-				{orden.visitaFecha && (
-					<div className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-						📅 Visita: <span className="font-semibold">{orden.visitaFecha}</span>
-						{orden.visitaHora && <span>{orden.visitaHora}</span>}
-					</div>
-				)}
-			</div>
-
-			{/* Productos */}
-			<ul className="border-t border-slate-100 dark:border-slate-700 pt-3 mb-3 space-y-2">
-				{(orden.productos || []).map((p: any, idx: number) => (
-					<li key={idx} className="space-y-1">
-						<div className="flex justify-between text-sm">
-							<span className="text-slate-700 dark:text-slate-300">
-								{p.nombre} <span className="text-slate-400">×{p.cantidad}</span>
-							</span>
-							<span className="font-medium text-slate-800 dark:text-slate-100">
-								${calcularSubtotalProducto(p).toFixed(2)}
-							</span>
-						</div>
-						{/* Mostrar variantes si existen */}
-						{p.selectedVariations && Object.keys(p.selectedVariations).length > 0 && (
-							<div className="bg-slate-100 dark:bg-slate-900/20 rounded px-2 py-1.5 border-l-2 border-slate-400 text-xs space-y-0.5">
-								<p className="font-semibold text-slate-700 dark:text-slate-300">📦 Variantes:</p>
-								{/* Si tenemos los nombres, mostrarlos */}
-								{p.selectedVariationsConNombres && Object.entries(p.selectedVariationsConNombres).map(([attrId, attrData]: [string, any]) => (
-									<p key={attrId} className="text-slate-600 dark:text-slate-400">
-										• <span className="font-semibold">{attrData.nombre}:</span> {attrData.valor}
-									</p>
-								))}
-								{/* Fallback si no tenemos los nombres */}
-								{!p.selectedVariationsConNombres && Object.entries(p.selectedVariations).map(([attrId, value]: [string, any]) => (
-									<p key={attrId} className="text-slate-600 dark:text-slate-400">
-										• {attrId}: {value}
-									</p>
-								))}
-															{p.variacionPersonalizada && (
-																<p className="text-slate-600 dark:text-slate-400">
-																	• <span className="font-semibold">Nombre para grabado:</span> {p.variacionPersonalizada}
-																</p>
-															)}
-							</div>
-						)}
-						{/* Mostrar personalización si existe */}
-						{p.personalizacionValues && Object.keys(p.personalizacionValues).length > 0 && (
-							<div className="bg-purple-50 dark:bg-purple-900/20 rounded px-2 py-1.5 border-l-2 border-purple-400 text-xs space-y-0.5">
-								<p className="font-semibold text-purple-700 dark:text-purple-300">📝 Personalización:</p>
-								{/* Si tenemos los nombres, mostrarlos */}
-								{p.personalizacionValuesConNombres && Object.entries(p.personalizacionValuesConNombres).map(([fieldId, fieldData]: [string, any]) => (
-									<p key={fieldId} className="text-purple-600 dark:text-purple-300">
-										• <span className="font-semibold">{fieldData.nombre}:</span> {fieldData.valor}
-									</p>
-								))}
-								{/* Fallback si no tenemos los nombres */}
-								{!p.personalizacionValuesConNombres && Object.entries(p.personalizacionValues).map(([fieldId, value]: [string, any]) => (
-									<p key={fieldId} className="text-purple-600 dark:text-purple-300">
-										• {value}
-									</p>
-								))}
-							</div>
-						)}
-					</li>
-				))}
-			</ul>
-
-			{/* Delivery Time Summary */}
-			<div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2 mb-3 border border-blue-100 dark:border-blue-900/40 space-y-1">
-				{obtenerResumenTiempos(orden.productos).map((tiempo) => (
-					<div key={tiempo} className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
-						<span>⏱️</span>
-						<span>Entrega: máximo {tiempo}h</span>
-					</div>
-				))}
-			</div>
-
-			<div className="flex items-center justify-between">
 				<div className="font-bold text-base text-slate-800 dark:text-slate-100">
 					Total: <span className="text-purple-700 dark:text-purple-300">${calcularTotalOrden(orden).toFixed(2)}</span>
 				</div>
-
-				{/* Acciones - Mostrar botones si NO está ya aprobada/rechazada */}
-				{orden.estado !== "aprobada" && orden.estado !== "rechazada" && (
-					<div className="flex gap-2">
-						<button
-							onClick={() => rechazarOrden(orden)}
-							className="px-3 py-1.5 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 text-sm font-medium transition-colors"
-						>
-							🚫 Rechazar
-						</button>
-
-						<button
-							onClick={() => aprobarOrden(orden)}
-							className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors flex items-center gap-2"
-						>
-							<span>✅ Aprobar</span>
-						</button>
-					</div>
-				)}
 			</div>
 
-			{orden.motivoRechazo && orden.estado === "rechazada" && (
-				<div className="mt-3 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg border border-red-100 dark:border-red-900/40">
-					Motivo rechazo: {orden.motivoRechazo}
-				</div>
+			{/* Botón ver más */}
+			<button
+				onClick={toggleExpand}
+				className="w-full text-center text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 py-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors mb-3"
+			>
+				{isExpanded ? "🔼 Ver menos" : "🔽 Ver más"}
+			</button>
+
+			{/* Detalles expandidos */}
+			{isExpanded && (
+				<>
+					{orden.visitaFecha && (
+						<div className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 mb-3">
+							📅 Visita: <span className="font-semibold">{orden.visitaFecha}</span>
+							{orden.visitaHora && <span>{orden.visitaHora}</span>}
+						</div>
+					)}
+
+					{/* Productos */}
+					<ul className="border-t border-slate-100 dark:border-slate-700 pt-3 mb-3 space-y-2">
+						{(orden.productos || []).map((p: any, idx: number) => (
+							<li key={idx} className="space-y-1">
+								<div className="flex justify-between text-sm">
+									<span className="text-slate-700 dark:text-slate-300">
+										{p.nombre} <span className="text-slate-400">×{p.cantidad}</span>
+									</span>
+									<span className="font-medium text-slate-800 dark:text-slate-100">
+										${calcularSubtotalProducto(p).toFixed(2)}
+									</span>
+								</div>
+								{/* Mostrar variantes si existen */}
+								{p.selectedVariations && Object.keys(p.selectedVariations).length > 0 && (
+									<div className="bg-slate-100 dark:bg-slate-900/20 rounded px-2 py-1.5 border-l-2 border-slate-400 text-xs space-y-0.5">
+										<p className="font-semibold text-slate-700 dark:text-slate-300">📦 Variantes:</p>
+										{/* Si tenemos los nombres, mostrarlos */}
+										{p.selectedVariationsConNombres && Object.entries(p.selectedVariationsConNombres).map(([attrId, attrData]: [string, any]) => (
+											<p key={attrId} className="text-slate-600 dark:text-slate-400">
+												• <span className="font-semibold">{attrData.nombre}:</span> {attrData.valor}
+											</p>
+										))}
+										{/* Fallback si no tenemos los nombres */}
+										{!p.selectedVariationsConNombres && Object.entries(p.selectedVariations).map(([attrId, value]: [string, any]) => (
+											<p key={attrId} className="text-slate-600 dark:text-slate-400">
+												• {attrId}: {value}
+											</p>
+										))}
+																{p.variacionPersonalizada && (
+																	<p className="text-slate-600 dark:text-slate-400">
+																		• <span className="font-semibold">Nombre para grabado:</span> {p.variacionPersonalizada}
+																	</p>
+																)}
+									</div>
+								)}
+								{/* Mostrar personalización si existe */}
+								{p.personalizacionValues && Object.keys(p.personalizacionValues).length > 0 && (
+									<div className="bg-purple-50 dark:bg-purple-900/20 rounded px-2 py-1.5 border-l-2 border-purple-400 text-xs space-y-0.5">
+										<p className="font-semibold text-purple-700 dark:text-purple-300">📝 Personalización:</p>
+										{/* Si tenemos los nombres, mostrarlos */}
+										{p.personalizacionValuesConNombres && Object.entries(p.personalizacionValuesConNombres).map(([fieldId, fieldData]: [string, any]) => (
+											<p key={fieldId} className="text-purple-600 dark:text-purple-300">
+												• <span className="font-semibold">{fieldData.nombre}:</span> {fieldData.valor}
+											</p>
+										))}
+										{/* Fallback si no tenemos los nombres */}
+										{!p.personalizacionValuesConNombres && Object.entries(p.personalizacionValues).map(([fieldId, value]: [string, any]) => (
+											<p key={fieldId} className="text-purple-600 dark:text-purple-300">
+												• {value}
+											</p>
+										))}
+									</div>
+								)}
+							</li>
+						))}
+					</ul>
+
+					{/* Delivery Time Summary */}
+					<div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2 mb-3 border border-blue-100 dark:border-blue-900/40 space-y-1">
+						{obtenerResumenTiempos(orden.productos).map((tiempo) => (
+							<div key={tiempo} className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
+								<span>⏱️</span>
+								<span>Entrega: máximo {tiempo}h</span>
+							</div>
+						))}
+					</div>
+
+					{/* Información de transferencia */}
+					{orden.metodoPago === "transferencia" && orden.transferenciaInfo && (
+						<div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-3 py-2 mb-3 border border-emerald-100 dark:border-emerald-900/40 space-y-2">
+							<p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">💰 Información de transferencia</p>
+							<div className="text-xs text-emerald-600 dark:text-emerald-400 space-y-1">
+								<p><strong>Banco:</strong> {orden.transferenciaInfo.cuentaInfo?.banco || "N/A"}</p>
+								<p><strong>Cuenta:</strong> {orden.transferenciaInfo.cuentaInfo?.numeroCuenta || "N/A"}</p>
+								<p><strong>Cliente:</strong> {orden.transferenciaInfo.nombre || "N/A"}</p>
+								<p><strong>Teléfono:</strong> {orden.transferenciaInfo.telefono || "N/A"}</p>
+								<p><strong>Correo:</strong> {orden.transferenciaInfo.correo || "N/A"}</p>
+								<p><strong>Ciudad:</strong> {orden.ciudadEntrega || "N/A"}</p>
+								<p><strong>Zona:</strong> {orden.zonaEntrega || "N/A"}</p>
+								<p><strong>Dirección:</strong> {orden.direccionEnvio || "N/A"}</p>
+							</div>
+							{orden.transferenciaInfo.evidencia && (
+								<div className="mt-2">
+									<p className="text-xs font-bold text-emerald-700 dark:text-emerald-300 mb-1">📸 Evidencia de pago</p>
+									<img
+										src={orden.transferenciaInfo.evidencia}
+										alt="Evidencia de pago"
+										className="max-w-full h-auto rounded border border-emerald-200 dark:border-emerald-800"
+									/>
+								</div>
+							)}
+						</div>
+					)}
+
+					{/* Acciones - Mostrar botones si NO está ya aprobada/rechazada */}
+					{orden.estado !== "aprobada" && orden.estado !== "rechazada" && (
+						<div className="flex gap-2">
+							<button
+								onClick={() => rechazarOrden(orden)}
+								className="px-3 py-1.5 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 text-sm font-medium transition-colors"
+							>
+								🚫 Rechazar
+							</button>
+
+							<button
+								onClick={() => aprobarOrden(orden)}
+								className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors flex items-center gap-2"
+							>
+								<span>✅ Aprobar</span>
+							</button>
+						</div>
+					)}
+
+					{orden.motivoRechazo && orden.estado === "rechazada" && (
+						<div className="mt-3 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg border border-red-100 dark:border-red-900/40">
+							Motivo rechazo: {orden.motivoRechazo}
+						</div>
+					)}
+				</>
 			)}
 		</div>
-	);
+		);
+	};
 
 	return (
 		<div className="max-w-3xl mx-auto px-4 py-8">

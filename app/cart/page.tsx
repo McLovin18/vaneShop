@@ -9,6 +9,7 @@ import {
   CiudadEntrega,
   obtenerCiudadesEntrega,
 } from "../lib/zonas-entrega-db";
+import { obtenerCuentasBancariasActivas, obtenerCuentaPorId } from "../lib/cuentas-bancarias";
 
 function resolveCartItemKey(item: any) {
   if (!item) return "";
@@ -57,6 +58,19 @@ export default function CartPage() {
   const [ciudadesEntrega, setCiudadesEntrega] = useState<CiudadEntrega[]>([]);
   const [ciudadEntregaId, setCiudadEntregaId] = useState("");
   const [zonaEntregaId, setZonaEntregaId] = useState("");
+  const [cuentasBancarias, setCuentasBancarias] = useState<any[]>([]);
+  const [direccionEnvio, setDireccionEnvio] = useState("");
+  const [cuentaSeleccionada, setCuentaSeleccionada] = useState<any>(null);
+
+  // Modal de transferencia
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferencia, setTransferencia] = useState({
+    nombre: "",
+    telefono: "",
+    correo: "",
+    cuentaBancariaId: "",
+    evidencia: null as File | null
+  });
 
   const calcularPrecioData = (p: any) => {
     const { basePrice, discount, hasDiscount, fakeOldPrice, finalPrice } = getSnapshotPricing(p);
@@ -71,12 +85,39 @@ export default function CartPage() {
 
     loadAtributos();
 
+    // Cargar ciudades de entrega
     obtenerCiudadesEntrega()
       .then((cities) => {
         setCiudadesEntrega(cities);
       })
       .catch(() => setError("No se pudo cargar la configuración de entregas."));
+
+    // Cargar cuentas bancarias activas (no afecta a ciudades si falla)
+    obtenerCuentasBancariasActivas()
+      .then((cuentas) => {
+        setCuentasBancarias(cuentas);
+      })
+      .catch((error) => {
+        console.error("Error cargando cuentas bancarias:", error);
+        // No mostrar error ya que las cuentas son opcionales para WhatsApp
+      });
   }, []);
+
+  // Cargar cuenta seleccionada cuando cambia el ID
+  useEffect(() => {
+    if (transferencia.cuentaBancariaId) {
+      obtenerCuentaPorId(transferencia.cuentaBancariaId)
+        .then((cuenta) => {
+          setCuentaSeleccionada(cuenta);
+        })
+        .catch((error) => {
+          console.error("Error cargando cuenta seleccionada:", error);
+          setCuentaSeleccionada(null);
+        });
+    } else {
+      setCuentaSeleccionada(null);
+    }
+  }, [transferencia.cuentaBancariaId]);
 
   const subtotal = carrito.reduce((sum, p) => {
     const { finalPrice } = calcularPrecioData(p);
@@ -140,7 +181,7 @@ export default function CartPage() {
     const headerMsg = "Hola, Me gustaría realizar una compra:";
     const footerMsg = "Quiero confirmar disponibilidad y conocer más detalles. Gracias!";
 
-    const deliveryText = `Ciudad de entrega: ${ciudadEntrega?.nombre}\nZona de entrega: ${zonaEntrega?.nombre}\nEnvío: ${envioGratis ? "GRATIS" : `$${costoEnvio.toFixed(2)}`}`;
+    const deliveryText = `Ciudad de entrega: ${ciudadEntrega?.nombre}\nZona de entrega: ${zonaEntrega?.nombre}\nDirección: ${direccionEnvio}\nEnvío: ${envioGratis ? "GRATIS" : `$${costoEnvio.toFixed(2)}`}`;
     const totalWhatsApp = total;
 
     const message = `${headerMsg}\n\n${productosText}\n\n${deliveryText}\n\n--------------------\nSubtotal: $${subtotal.toFixed(2)}\nTotal: $${totalWhatsApp.toFixed(2)}\n--------------------\n\n${footerMsg}`;
@@ -157,6 +198,11 @@ export default function CartPage() {
 
     if (!ciudadEntrega || !zonaEntrega) {
       setError("Selecciona una ciudad y una zona de entrega para continuar.");
+      return;
+    }
+
+    if (!direccionEnvio || direccionEnvio.trim() === "") {
+      setError("Por favor ingresa tu dirección de entrega.");
       return;
     }
 
@@ -187,6 +233,94 @@ export default function CartPage() {
       setError("");
       removeCarrito(id);
       addCarrito({ ...prod, cantidad });
+    }
+  };
+
+  const handleTransferirPago = async () => {
+    try {
+      setError("");
+      
+      // Validaciones
+      if (!transferencia.nombre || !transferencia.telefono || !transferencia.correo || !transferencia.cuentaBancariaId || !transferencia.evidencia) {
+        setError("Por favor completa todos los campos");
+        return;
+      }
+
+      if (!direccionEnvio || direccionEnvio.trim() === "") {
+        setError("Por favor ingresa tu dirección de entrega.");
+        return;
+      }
+
+      // Validar email
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(transferencia.correo)) {
+        setError("Correo electrónico inválido");
+        return;
+      }
+
+      // Obtener información de la cuenta bancaria seleccionada
+      console.log("🔍 Cuenta bancaria ID:", transferencia.cuentaBancariaId);
+      const cuentaInfo = await obtenerCuentaPorId(transferencia.cuentaBancariaId);
+      console.log("🔍 Cuenta info obtenida:", cuentaInfo);
+
+      // Preparar datos de la orden
+      const ordenData = {
+        productos: carrito,
+        userId: isLogged ? user?.uid : "guest",
+        userEmail: transferencia.correo,
+        userName: transferencia.nombre,
+        userPhone: transferencia.telefono,
+        ciudadEntrega: ciudadEntrega?.nombre,
+        zonaEntrega: zonaEntrega?.nombre,
+        direccionEnvio: direccionEnvio,
+        costoEnvio,
+        montoMinimoGratis: montoMinimoGratisCiudad,
+        metodoPago: "transferencia",
+        transferenciaInfo: {
+          cuentaBancariaId: transferencia.cuentaBancariaId,
+          cuentaInfo: cuentaInfo,
+          nombre: transferencia.nombre,
+          telefono: transferencia.telefono,
+          correo: transferencia.correo,
+        }
+      };
+
+      // Subir evidencia y crear orden
+      const formData = new FormData();
+      formData.append('evidencia', transferencia.evidencia);
+      formData.append('ordenData', JSON.stringify(ordenData));
+
+      const response = await fetch('/api/ordenes/transferencia', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al procesar la transferencia');
+      }
+
+      const result = await response.json();
+
+      // Limpiar carrito y cerrar modal
+      carrito.forEach((item) => {
+        removeCarrito(resolveCartItemKey(item));
+      });
+      setShowTransferModal(false);
+      setTransferencia({
+        nombre: "",
+        telefono: "",
+        correo: "",
+        cuentaBancariaId: "",
+        evidencia: null
+      });
+      setDireccionEnvio("");
+
+      // Mostrar mensaje de éxito
+      setError("");
+      alert(`Orden ${result.orderId} creada exitosamente. Te hemos enviado un correo de confirmación.`);
+
+    } catch (error: any) {
+      setError(error.message || "Error al procesar la transferencia");
     }
   };
 
@@ -391,6 +525,20 @@ export default function CartPage() {
                       {ciudadEntrega && (ciudadEntrega.zonas || []).length === 0 && <p className="mt-2 text-xs text-[var(--textSecondary)]">Esta ciudad todavía no tiene zonas configuradas.</p>}
                       {ciudadEntrega && zonaEntrega && <p className="mt-3 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/10 px-3 py-2 rounded-lg border border-[var(--primary)]/20">{envioGratis && cobroFijoZona !== undefined ? `Envío con tarifa especial: $${cobroFijoZona.toFixed(2)} (por alcanzar el mínimo)` : envioGratis ? "Tu envío será gratis por alcanzar el mínimo." : `Costo de entrega: $${costoEnvio.toFixed(2)} (Mínimo para envío gratis: $${montoMinimoGratisCiudad.toFixed(2)})`}</p>}
                     </div>
+                    <div className="rounded-xl border-2 border-[var(--primary)]/20 bg-gradient-to-br from-[var(--primary)]/5 to-[var(--primaryHover)]/5 p-4 shadow-sm">
+                      <p className="mb-3 text-sm font-bold text-[var(--primary)] flex items-center gap-2">
+                        <span className="material-icons-round text-lg">location_on</span>
+                        Dirección de entrega
+                      </p>
+                      <input
+                        type="text"
+                        value={direccionEnvio}
+                        onChange={(e) => setDireccionEnvio(e.target.value)}
+                        className="w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
+                        placeholder="Escribe tu dirección específica de entrega"
+                      />
+                      <p className="mt-2 text-xs text-[var(--textSecondary)]">Ingresa la dirección exacta donde deseas recibir tu pedido</p>
+                    </div>
                     <button
                       onClick={handleGenerarOrden}
                       disabled={!ciudadEntrega || !zonaEntrega}
@@ -400,6 +548,15 @@ export default function CartPage() {
                       <span className="material-icons-round text-lg">chat</span>
                       Pedir por WhatsApp
                     </button>
+                    <button
+                      onClick={() => setShowTransferModal(true)}
+                      disabled={!ciudadEntrega || !zonaEntrega}
+                      className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-extrabold text-sm rounded-xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-md transform hover:scale-[1.02] active:scale-[0.98]"
+                      title="Pagar por transferencia bancaria"
+                    >
+                      <span className="material-icons-round text-lg">account_balance</span>
+                      Pagar por Transferencia
+                    </button>
                   </div>
                 </div>
               </div>
@@ -408,6 +565,107 @@ export default function CartPage() {
         </main>
       </div>
       {!isLogged && <BottomBarPublic />}
+      
+      {/* Modal de Transferencia */}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[var(--card)] rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-[var(--text)]">Pagar por Transferencia</h2>
+              <button 
+                onClick={() => setShowTransferModal(false)}
+                className="text-[var(--textSecondary)] hover:text-[var(--text)]"
+              >
+                <span className="material-icons-round">close</span>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--text)] mb-1">Nombre completo</label>
+                <input
+                  type="text"
+                  value={transferencia.nombre}
+                  onChange={(e) => setTransferencia({...transferencia, nombre: e.target.value})}
+                  className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
+                  placeholder="Tu nombre completo"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text)] mb-1">Teléfono</label>
+                <input
+                  type="tel"
+                  value={transferencia.telefono}
+                  onChange={(e) => setTransferencia({...transferencia, telefono: e.target.value})}
+                  className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
+                  placeholder="0991234567"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text)] mb-1">Correo electrónico</label>
+                <input
+                  type="email"
+                  value={transferencia.correo}
+                  onChange={(e) => setTransferencia({...transferencia, correo: e.target.value})}
+                  className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
+                  placeholder="tu@email.com"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text)] mb-1">Cuenta bancaria</label>
+                <select
+                  value={transferencia.cuentaBancariaId}
+                  onChange={(e) => setTransferencia({...transferencia, cuentaBancariaId: e.target.value})}
+                  className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
+                >
+                  <option value="">Selecciona una cuenta</option>
+                  {cuentasBancarias.map(cuenta => (
+                    <option key={cuenta.id} value={cuenta.id}>
+                      {cuenta.banco} - {cuenta.tipo} ({cuenta.numeroCuenta})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {transferencia.cuentaBancariaId && cuentaSeleccionada && (
+                <div className="bg-[var(--primary)]/10 border border-[var(--primary)]/20 rounded-lg p-4">
+                  <h3 className="font-bold text-[var(--primary)] mb-2">Información de cuenta</h3>
+                  <div className="space-y-1 text-sm text-[var(--text)]">
+                    <p><strong>Banco:</strong> {cuentaSeleccionada.banco}</p>
+                    <p><strong>Tipo:</strong> {cuentaSeleccionada.tipo}</p>
+                    <p><strong>Número:</strong> {cuentaSeleccionada.numeroCuenta}</p>
+                    <p><strong>Titular:</strong> {cuentaSeleccionada.titular}</p>
+                    <p><strong>Cédula:</strong> {cuentaSeleccionada.cedula}</p>
+                    <p><strong>Para transferir a:</strong> {cuentaSeleccionada.nombreParaTransferencia}</p>
+                  </div>
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text)] mb-1">Evidencia de pago</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setTransferencia({...transferencia, evidencia: e.target.files?.[0] || null})}
+                  className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
+                />
+                <p className="text-xs text-[var(--textSecondary)] mt-1">Sube una captura del comprobante de transferencia</p>
+              </div>
+              
+              <button
+                onClick={handleTransferirPago}
+                disabled={!transferencia.nombre || !transferencia.telefono || !transferencia.correo || !transferencia.cuentaBancariaId || !transferencia.evidencia}
+                className="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Enviar Transacción
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

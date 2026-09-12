@@ -52,7 +52,12 @@ export async function GET(req: NextRequest) {
     }));
     
     console.log("✅ [ordenes] Devolviendo", ordenes.length, "órdenes");
-    return NextResponse.json(ordenes);
+    return NextResponse.json(ordenes, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache',
+      }
+    });
   } catch (error: any) {
     console.error("❌ [ordenes] Error no capturado:", error);
     return NextResponse.json(

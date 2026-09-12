@@ -6,6 +6,8 @@ const Sidebar = ({ role = "admin" }) => {
   const adminItems = [
     { name: "Dashboard", path: "/admin", icon: "dashboard" },
     { name: "Inventario", path: "/admin/inventario", icon: "inventory" },
+    { name: "Órdenes", path: "/admin/pedidos", icon: "receipt" },
+    { name: "Cuentas bancarias", path: "/admin/cuentas-bancarias", icon: "account_balance" },
     { name: "Reseñas", path: "/admin/reviews", icon: "rate_review" },
     { name: "Editar landing", path: "/admin/edit-landing", icon: "edit" },
     { name: "Editar blogs", path: "/admin/edit-blogs", icon: "library_books" },

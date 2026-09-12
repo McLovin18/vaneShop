@@ -10,7 +10,7 @@ function buildVerificationEmailHTML(verificationLink: string): string {
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-  <title>Verifica tu correo — TecnoThings</title>
+  <title>Verifica tu correo — Vaneshop</title>
   <style>
     body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
     table { border-collapse: collapse; }
@@ -26,7 +26,7 @@ function buildVerificationEmailHTML(verificationLink: string): string {
           <!-- Header simple -->
           <tr>
             <td style="background:#6d28d9;padding:20px;text-align:center;color:#fff;">
-              <h1 style="margin:0;font-size:24px;font-weight:bold;">TecnoThings</h1>
+              <h1 style="margin:0;font-size:24px;font-weight:bold;">VaneShop</h1>
             </td>
           </tr>
 
@@ -34,7 +34,7 @@ function buildVerificationEmailHTML(verificationLink: string): string {
           <tr>
             <td style="padding:30px;color:#333;font-size:14px;line-height:1.6;">
               <p>Hola,</p>
-              <p>Has solicitado verificar tu correo electrónico en TecnoThings. Haz clic en el botón de abajo para confirmar tu identidad.</p>
+              <p>Has solicitado verificar tu correo electrónico en VaneShop. Haz clic en el botón de abajo para confirmar tu identidad.</p>
               
               <!-- Botón simple -->
               <table cellpadding="0" cellspacing="0" style="margin:20px 0;">
@@ -58,7 +58,7 @@ function buildVerificationEmailHTML(verificationLink: string): string {
           <!-- Footer -->
           <tr>
             <td style="background:#f9f9f9;padding:15px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;">
-              © ${new Date().getFullYear()} TecnoThings. No responder a este correo.
+              © ${new Date().getFullYear()} VaneShop. No responder a este correo.
             </td>
           </tr>
         </table>
@@ -99,13 +99,13 @@ export async function POST(req: NextRequest) {
 
     console.log("[send-verification-email] Iniciando envío:", {
       to: email,
-      from: "noreply@tecnothings.com",
+      from: "noreply@vaneshopart.com",
       apiKeyExists: !!process.env.RESEND_API_KEY,
     });
 
     // Enviar SOLO con el dominio verificado
     const emailResponse = await resend.emails.send({
-      from: "noreply@tecnothings.com",
+      from: "noreply@vaneshopart.com",
       to: email,
       subject: "Verifica tu cuenta",
       html: buildVerificationEmailHTML(verificationLink),
@@ -114,11 +114,11 @@ export async function POST(req: NextRequest) {
         "X-MSMail-Priority": "Normal",
         "Precedence": "transactional",
         "X-Mailer": "Resend",
-        "List-Unsubscribe": "<mailto:unsubscribe@technothings.com>",
+        "List-Unsubscribe": "<mailto:unsubscribe@vaneshopart.com>",
         "X-Entity-Ref-ID": "transactional",
         "X-Auto-Response-Suppress": "All",
       },
-      reply_to: "soporte@tecnothings.com",
+      replyTo: "soporte@vaneshopart.com",
     });
 
     console.log("[send-verification-email] Respuesta de Resend:", emailResponse);
