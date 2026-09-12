@@ -299,8 +299,8 @@ export default function HeroSection({
       screenType === "mobile"
         ? "6 / 5"
         : screenType === "tablet"
-        ? "11 / 9"
-        : "2400 / 1300",
+        ? "14 / 9"
+        : "2400 / 1000",
     overflow: "hidden",
   };
 
@@ -513,44 +513,39 @@ export default function HeroSection({
 
         {/* Contenido textual por defecto (sin posicionamiento personalizado) */}
         {!fieldPositions?.badge && !fieldPositions?.title && !fieldPositions?.subtitle && (
-          <div className="absolute left-0 right-0 bottom-7 z-20 flex flex-col items-start text-left gap-0 sm:gap-0 pb-1 px-2 sm:pb-4 sm:px-8 w-full max-w-full">
-            <div className="absolute sm:bottom-50 bottom-15">
-                {current.badge && (
-                  <span
-                    className="inline-block px-2 py-0.5 text-[6px] sm:px-3 sm:py-1 sm:text-xs font-bold tracking-widest uppercase bg-white/90 text-black dark:bg-slate-900/90 dark:text-white rounded-full shadow"
-                    style={{ ...defaultBadgeInlineStyle, ...badgeStyle }}
-                  >
-                    {current.badge}
-                  </span>
-                )}
-                {current.title && (
-                  <h2
-                    className="text-xl sm:text-5xl lg:text-5xl font-extrabold text-white leading-tight max-w-[90vw] sm:max-w-2xl drop-shadow-lg"
-                    style={{ ...defaultTitleInlineStyle, ...titleStyle }}
-                  >
-                    {current.title}
-                  </h2>
-                )}
-                {current.subtitle && (
-                  <p
-                    className="text-white/80 text-[9px] sm:text-sm max-w-[90vw] sm:max-w-2xl drop-shadow"
-                    style={{ ...defaultSubtitleInlineStyle, ...subtitleStyle }}
-                  >
-                    {current.subtitle}
-                  </p>
-                )}
-            </div>
-
+          <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center sm:items-center lg:items-start px-2 sm:px-8 pb-5 sm:pb-8 gap-1.5 sm:gap-3 w-full">
+            {current.badge && (
+              <span
+                className="px-2 py-0.5 text-[6px] sm:px-3 sm:py-1 sm:text-xs font-bold tracking-widest uppercase bg-white/90 text-black dark:bg-slate-900/90 dark:text-white rounded-full shadow"
+                style={{ ...defaultBadgeInlineStyle, ...badgeStyle }}
+              >
+                {current.badge}
+              </span>
+            )}
+            {current.title && (
+              <h2
+                className="text-xl sm:text-5xl lg:text-5xl font-extrabold text-white leading-none max-w-full drop-shadow-lg whitespace-nowrap text-center sm:text-center lg:text-left"
+                style={{ ...defaultTitleInlineStyle, ...titleStyle, transform: 'none' }}
+              >
+                {current.title}
+              </h2>
+            )}
+            {current.subtitle && (
+              <p
+                className="w-full text-white/80 text-[9px] sm:text-sm drop-shadow text-left"
+                style={{ ...defaultSubtitleInlineStyle, ...subtitleStyle }}
+              >
+                {current.subtitle}
+              </p>
+            )}
             {current.buttonText && (
-              <div className="w-full flex justify-center sm:py-3 pb-5">
-                <a
-                  href={current.buttonLink || "/products-by-category"}
-                  className="inline-flex items-centersm:gap-2 bg-white/95 hover:bg-white text-black font-bold text-[9px] sm:text-2xl px-3 py-1.5 sm:px-4 sm:py-3 rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95"
-                  style={{ ...defaultButtonInlineStyle, ...buttonTextStyle }}
-                >
-                  <span>{current.buttonText}</span>
-                </a>
-              </div>
+              <a
+                href={current.buttonLink || "/products-by-category"}
+                className="inline-flex items-center gap-2 mt-3 sm:mt-6 bg-white/95 hover:bg-white mx-auto text-black font-bold text-[9px] sm:text-2xl px-3 py-1.5 sm:px-4 sm:py-3 rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                style={{ ...defaultButtonInlineStyle, ...buttonTextStyle }}
+              >
+                <span>{current.buttonText}</span>
+              </a>
             )}
           </div>
         )}

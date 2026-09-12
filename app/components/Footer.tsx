@@ -66,7 +66,7 @@ const Footer: React.FC = () => {
             {/* Columna 1: Información de la tienda */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left gap-1">
               <span className="text-base font-bold" style={{ color: "#8a7556" }}>
-                vaneseshop
+                vaneshop
               </span>
 
               <a
@@ -139,7 +139,7 @@ const Footer: React.FC = () => {
         {/* Copyright row */}
         <div className={styles.ftCopyRow}>
           <p className="text-xs" style={{ color: "#8a7556" }}>
-            © {new Date().getFullYear()} vaneseshop. Todos los derechos reservados.
+            © {new Date().getFullYear()} vaneshop. Todos los derechos reservados.
           </p>
           <div className={styles.ftCopyRight}>
             <div className="flex items-center gap-1.5 text-xs" style={{ color: "#8a7556" }}>

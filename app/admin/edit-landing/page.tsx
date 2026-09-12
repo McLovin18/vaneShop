@@ -43,6 +43,7 @@ const AVAILABLE_SECTION_TYPES = [
   "featuredCategories",
   "featuredProducts",
   "gallery",
+  "titleSubtitle",
 ] as const;
 
 

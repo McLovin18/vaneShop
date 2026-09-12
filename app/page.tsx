@@ -9,6 +9,7 @@ import { getLandingPage } from "./lib/landing-db";
 import { obtenerProductos } from "./lib/productos-db";
 import type { LandingSection } from "./lib/landing-types";
 import { useUser } from "./context/UserContext";
+import ContactSection from "./landing/sections/ContactSection";
 
 export default function Home() {
   const { isLogged } = useUser();
@@ -177,12 +178,13 @@ const lastHeroIndex = useMemo(() => {
         ) : renderedSections.length > 0 ? (
           <div className="flex flex-col">
             {renderedSections.map((section, index) => (
-            <SectionRenderer 
-                key={section.id} 
+            <SectionRenderer
+                key={section.id}
                 section={section}
                 isLastHero={section.type === "hero" && index === lastHeroIndex}
             />
             ))}
+            <ContactSection />
           </div>
         ) : (
           <div className="flex min-h-screen items-center justify-center px-6 text-center text-sm text-slate-500">

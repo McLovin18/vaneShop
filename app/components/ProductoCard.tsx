@@ -491,7 +491,6 @@ function ProductoCard({
               )}
               <span className="pc-price-final">
                 ${finalPrice.toFixed(2)}{" "}
-                <span className="pc-price-currency">USD</span>
               </span>
             </div>
 

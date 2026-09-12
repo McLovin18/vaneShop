@@ -1,6 +1,7 @@
 export type LandingSectionStyles = {
   backgroundColor?: string;
   textColor?: string;
+  accentColor?: string;
   paddingTop?: string;
   paddingBottom?: string;
   textAlign?: "left" | "center" | "right";

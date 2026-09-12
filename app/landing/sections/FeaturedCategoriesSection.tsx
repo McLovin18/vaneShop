@@ -75,7 +75,7 @@ export default function FeaturedCategoriesSection({
               )}
               {cat.title && (
                 <h3
-                  className="section-subtitle page-lead text-center md:text-left"
+                  className="section-subtitle text-2xl page-lead text-center md:text-left"
                   style={fieldStyles?.itemTitle || { color: "var(--text, #584738)" }}
                 >
                   {cat.title}
