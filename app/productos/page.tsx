@@ -235,8 +235,8 @@ export default function ProductosPage() {
   const getProductsPerPage = () => {
     if (typeof window !== "undefined") {
       if (window.innerWidth < 640) return 10;
-      if (window.innerWidth >= 1024) return 12;
-      if (window.innerWidth >= 768) return 9;
+      if (window.innerWidth >= 1024) return 15;
+      if (window.innerWidth >= 768) return 10;
       if (window.innerWidth >= 640) return 6;
     }
     return 10;

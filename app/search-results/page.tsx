@@ -99,8 +99,8 @@ export default function SearchResultsPage() {
       const getProductsPerPage = () => {
         if (typeof window !== 'undefined') {
           if (window.innerWidth < 640) return 10; // móvil
-          if (window.innerWidth >= 1024) return 4 * 3; // lg: 4 cols x 3 filas
-          if (window.innerWidth >= 768) return 3 * 3; // md: 3 cols x 3 filas
+          if (window.innerWidth >= 1024) return 15; // lg: 4 cols x 3 filas
+          if (window.innerWidth >= 768) return 10; // md: 3 cols x 3 filas
           if (window.innerWidth >= 640) return 2 * 3; // sm: 2 cols x 3 filas
         }
         return 10;

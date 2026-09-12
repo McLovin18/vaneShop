@@ -1,23 +1,23 @@
 "use client";
-import BottomBarPublic from "../components/BottomBarPublic";
-import ProductoCard from "../components/ProductoCard";
-import { Loading3DIcon } from "../components/Loading3DIcon";
+import BottomBarPublic from "../../components/BottomBarPublic";
+import ProductoCard from "../../components/ProductoCard";
+import { Loading3DIcon } from "../../components/Loading3DIcon";
 
 import { useEffect, useState, useMemo, useRef } from "react";
 
 import { 
   obtenerProductosPorBodega
-} from "../lib/productos-db";
-import { obtenerBodegas } from "../lib/bodegas-db";
+} from "../../lib/productos-db";
+import { obtenerBodegas } from "../../lib/bodegas-db";
 import {
   obtenerCategorias,
   mapCategorySnapshot,
   sortCategoriasByOrder,
   sameCategoryId,
-} from "../lib/categorias-db";
-import { useUser } from "../context/UserContext";
+} from "../../lib/categorias-db";
+import { useUser } from "../../context/UserContext";
 import { collection, onSnapshot } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { db } from "../../lib/firebase";
 
 export default function NuevaColeccionPage() {
   const isLogged = useUser();
