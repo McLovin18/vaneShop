@@ -249,7 +249,7 @@ function buildTransferenciaEmailHTML(orden: any): string {
               <div style="background:#f0fdf4;border-left:4px solid #10b981;padding:16px;border-radius:4px;">
                 <p style="margin:0 0 4px;font-size:12px;color:#666;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;">Número de orden</p>
                 <p style="margin:0;font-size:24px;font-weight:bold;color:#10b981;">${orden.orderId || "N/A"}</p>
-                <p style="margin:8px 0 0;font-size:13px;color:#666;">Fecha: ${orden.createdAt ? new Date(orden.createdAt).toLocaleDateString("es-ES") : "N/A"}</p>
+                <p style="margin:8px 0 0;font-size:13px;color:#666;">Fecha: ${new Date().toLocaleString("es-ES", { dateStyle: "full", timeStyle: "short" })}</p>
               </div>
             </td>
           </tr>
@@ -261,9 +261,10 @@ function buildTransferenciaEmailHTML(orden: any): string {
             <td style="padding:0 36px 24px;">
               <h2 style="margin:0 0 12px;font-size:16px;font-weight:bold;color:#1f2937;">Información del cliente</h2>
               <div style="background:#f9fafb;border-radius:8px;padding:16px;">
-                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Nombre:</strong> ${userInfo.nombre || "N/A"}</p>
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Nombre o razón social:</strong> ${userInfo.nombre || "N/A"}</p>
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Cédula/RUC:</strong> ${userInfo.cedulaRuc || "N/A"}</p>
                 <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Teléfono:</strong> ${userInfo.telefono || "N/A"}</p>
-                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Correo:</strong> ${userInfo.correo || "N/A"}</p>
+                <p style="margin:0;font-size:14px;color:#374151;"><strong>Correo:</strong> ${userInfo.correo || "N/A"}</p>
               </div>
             </td>
           </tr>
@@ -275,6 +276,7 @@ function buildTransferenciaEmailHTML(orden: any): string {
             <td style="padding:0 36px 24px;">
               <h2 style="margin:0 0 12px;font-size:16px;font-weight:bold;color:#1f2937;">Información de envío</h2>
               <div style="background:#f9fafb;border-radius:8px;padding:16px;">
+                <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Nombre para envío:</strong> ${orden.nombreEnvio || "N/A"}</p>
                 <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Ciudad:</strong> ${orden.ciudadEntrega || "N/A"}</p>
                 <p style="margin:0 0 8px;font-size:14px;color:#374151;"><strong>Zona:</strong> ${orden.zonaEntrega || "N/A"}</p>
                 <p style="margin:0;font-size:14px;color:#374151;"><strong>Dirección:</strong> ${orden.direccionEnvio || "N/A"}</p>

@@ -59,6 +59,7 @@ export default function CartPage() {
   const [ciudadEntregaId, setCiudadEntregaId] = useState("");
   const [zonaEntregaId, setZonaEntregaId] = useState("");
   const [cuentasBancarias, setCuentasBancarias] = useState<any[]>([]);
+  const [nombreEnvio, setNombreEnvio] = useState("");
   const [direccionEnvio, setDireccionEnvio] = useState("");
   const [cuentaSeleccionada, setCuentaSeleccionada] = useState<any>(null);
 
@@ -67,6 +68,7 @@ export default function CartPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [transferencia, setTransferencia] = useState({
     nombre: "",
+    cedulaRuc: "",
     telefono: "",
     correo: "",
     cuentaBancariaId: "",
@@ -202,6 +204,11 @@ export default function CartPage() {
       return;
     }
 
+    if (!nombreEnvio || nombreEnvio.trim() === "") {
+      setError("Por favor ingresa tu nombre para el envío.");
+      return;
+    }
+
     if (!direccionEnvio || direccionEnvio.trim() === "") {
       setError("Por favor ingresa tu dirección de entrega.");
       return;
@@ -243,8 +250,14 @@ export default function CartPage() {
       setIsSubmitting(true);
       
       // Validaciones
-      if (!transferencia.nombre || !transferencia.telefono || !transferencia.correo || !transferencia.cuentaBancariaId || !transferencia.evidencia) {
+      if (!transferencia.nombre || !transferencia.cedulaRuc || !transferencia.telefono || !transferencia.correo || !transferencia.cuentaBancariaId || !transferencia.evidencia) {
         setError("Por favor completa todos los campos");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!nombreEnvio || nombreEnvio.trim() === "") {
+        setError("Por favor ingresa tu nombre para el envío.");
         setIsSubmitting(false);
         return;
       }
@@ -274,6 +287,7 @@ export default function CartPage() {
         userEmail: transferencia.correo,
         userName: transferencia.nombre,
         userPhone: transferencia.telefono,
+        nombreEnvio: nombreEnvio,
         ciudadEntrega: ciudadEntrega?.nombre,
         zonaEntrega: zonaEntrega?.nombre,
         direccionEnvio: direccionEnvio,
@@ -284,6 +298,7 @@ export default function CartPage() {
           cuentaBancariaId: transferencia.cuentaBancariaId,
           cuentaInfo: cuentaInfo,
           nombre: transferencia.nombre,
+          cedulaRuc: transferencia.cedulaRuc,
           telefono: transferencia.telefono,
           correo: transferencia.correo,
         }
@@ -313,11 +328,13 @@ export default function CartPage() {
       setShowTransferModal(false);
       setTransferencia({
         nombre: "",
+        cedulaRuc: "",
         telefono: "",
         correo: "",
         cuentaBancariaId: "",
         evidencia: null
       });
+      setNombreEnvio("");
       setDireccionEnvio("");
 
       // Mostrar mensaje de éxito
@@ -516,6 +533,20 @@ export default function CartPage() {
                   <div className="space-y-3">
                     <div className="rounded-xl border-2 border-[var(--primary)]/20 bg-gradient-to-br from-[var(--primary)]/5 to-[var(--primaryHover)]/5 p-4 shadow-sm">
                       <p className="mb-3 text-sm font-bold text-[var(--primary)] flex items-center gap-2">
+                        <span className="material-icons-round text-lg">person</span>
+                        Datos de envío
+                      </p>
+                      <input
+                        type="text"
+                        value={nombreEnvio}
+                        onChange={(e) => setNombreEnvio(e.target.value)}
+                        className="w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
+                        placeholder="Tu nombre para el envío"
+                      />
+                      <p className="mt-2 text-xs text-[var(--textSecondary)]">Ingresa el nombre de quien recibirá el pedido</p>
+                    </div>
+                    <div className="rounded-xl border-2 border-[var(--primary)]/20 bg-gradient-to-br from-[var(--primary)]/5 to-[var(--primaryHover)]/5 p-4 shadow-sm">
+                      <p className="mb-3 text-sm font-bold text-[var(--primary)] flex items-center gap-2">
                         <span className="material-icons-round text-lg">location_on</span>
                         ¿Dónde quieres recibir tu pedido?
                       </p>
@@ -589,13 +620,24 @@ export default function CartPage() {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-1">Nombre completo</label>
+                <label className="block text-sm font-medium text-[var(--text)] mb-1">Nombre o razón social</label>
                 <input
                   type="text"
                   value={transferencia.nombre}
                   onChange={(e) => setTransferencia({...transferencia, nombre: e.target.value})}
                   className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
-                  placeholder="Tu nombre completo"
+                  placeholder="Nombre o razón social"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text)] mb-1">Cédula/RUC</label>
+                <input
+                  type="text"
+                  value={transferencia.cedulaRuc}
+                  onChange={(e) => setTransferencia({...transferencia, cedulaRuc: e.target.value})}
+                  className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
+                  placeholder="Tu cédula o RUC"
                 />
               </div>
               
