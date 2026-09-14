@@ -50,7 +50,7 @@ export default function ContactSection() {
                 </svg>
               </div>
               <h3 className="font-semibold text-lg mb-2" style={{ color: "var(--color-vanilla)" }}>Correo</h3>
-              <p className="text-sm" style={{ color: "var(--color-sand)" }}>contacto@vanessashop.com</p>
+              <p className="text-sm" style={{ color: "var(--color-sand)" }}>vanes25@hotmail.es</p>
             </div>
           </div>
 

@@ -50,7 +50,7 @@ function resolveAvailableStock(item: any) {
 
 // --- Pagina principal del carrito
 export default function CartPage() {
-  const { carrito: carritoRaw, removeCarrito, addCarrito } = useUser();
+  const { carrito: carritoRaw, removeCarrito, addCarrito, user } = useUser();
   const carrito = carritoRaw as any[];
   const [error, setError] = useState("");
   const { isLogged } = useUser();
@@ -584,7 +584,23 @@ export default function CartPage() {
                       title="Enviar pedido por WhatsApp"
                     >
                       <span className="material-icons-round text-lg">chat</span>
-                      Pedir por WhatsApp
+                      Pagar con tarjeta de credito/debito
+                      <div className="flex items-center gap-1 ml-1">
+                        <svg className="w-6 h-4" viewBox="0 0 48 32" fill="none">
+                          <rect width="48" height="32" rx="4" fill="#1A1F71"/>
+                          <path d="M19.5 21.5H17L18.5 12H21L19.5 21.5Z" fill="white"/>
+                          <path d="M28 12.5C27.5 12.3 26.7 12 25.7 12C23.2 12 21.5 13.2 21.5 15C21.5 16.3 22.7 17 23.7 17.5C24.7 18 25 18.3 25 18.8C25 19.5 24.2 19.8 23.5 19.8C22.5 19.8 21.8 19.6 21 19.2L20.7 19L20.3 21.5C21 21.8 22 22 23.2 22C25.8 22 27.5 20.8 27.5 19C27.5 18 26.8 17.3 25.3 16.5C24.3 16 23.7 15.7 23.7 15.2C23.7 14.8 24.2 14.3 25.3 14.3C26.2 14.3 26.8 14.5 27.3 14.7L27.5 14.8L28 12.5Z" fill="white"/>
+                          <path d="M32 12H30C29.5 12 29 12.2 28.8 12.8L25 21.5H27.5L28 20H31L31.3 21.5H33.5L31.5 12H32ZM28.8 18L29.8 15L30.3 18H28.8Z" fill="white"/>
+                          <path d="M15 12L12.5 18.5L12.2 17.2C11.7 15.8 10.3 14.2 8.7 13.5L11 21.5H13.5L17.5 12H15Z" fill="white"/>
+                          <path d="M10.5 12H6.5L6.5 12.3C9.5 13 11.5 14.8 12.2 17.2L11.5 12.8C11.3 12.2 10.8 12 10.5 12Z" fill="#F9A533"/>
+                        </svg>
+                        <svg className="w-6 h-4" viewBox="0 0 48 32" fill="none">
+                          <rect width="48" height="32" rx="4" fill="#EB001B"/>
+                          <rect x="24" width="24" height="32" fill="#F79E1B"/>
+                          <path d="M24 6C20.5 6 17.5 8.5 16.5 12C17.5 15.5 20.5 18 24 18C27.5 18 30.5 15.5 31.5 12C30.5 8.5 27.5 6 24 6Z" fill="#FF5F00"/>
+                          <path d="M24 8C21.5 8 19.5 9.8 18.8 12C19.5 14.2 21.5 16 24 16C26.5 16 28.5 14.2 29.2 12C28.5 9.8 26.5 8 24 8Z" fill="white"/>
+                        </svg>
+                      </div>
                     </button>
                     <button
                       onClick={() => setShowTransferModal(true)}
