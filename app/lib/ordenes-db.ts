@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import admin from "./firebase-admin";
 import { getCatalogPricing } from "./pricing";
+import { findMatchingVariant } from "./order-checkout-utils";
 
 const COLLECTION = "ordenes";
 
@@ -101,10 +102,18 @@ export async function crearOrden(orden: any) {
     const lineTotal = unitPrice * cantidad;
 
     // ⚠️ VALIDACIÓN: Stock disponible (anti-overselling)
-    const stock = Number(data.stock || 0);
-    if (stock < cantidad) {
+    // Verificar stock de variante si el producto tiene variantes y se seleccionó una
+    const variantMatch = findMatchingVariant(data, item);
+    const availableStock = variantMatch
+      ? Number(variantMatch.variant?.cantidad ?? variantMatch.variant?.stock ?? 0)
+      : Number(data.stock ?? 0);
+
+    if (availableStock < cantidad) {
+      const variantInfo = variantMatch
+        ? ` (variante: ${Object.values(variantMatch.variant?.attributes || {}).join(', ') || variantMatch.variant?.talla || variantMatch.variant?.color || 'seleccionada'})`
+        : '';
       throw new Error(
-        `Stock insuficiente para "${data.nombre}". Disponibles: ${stock}, Solicitados: ${cantidad}`
+        `Stock insuficiente para "${data.nombre}"${variantInfo}. Disponibles: ${availableStock}, Solicitados: ${cantidad}`
       );
     }
 
@@ -148,7 +157,7 @@ export async function crearOrden(orden: any) {
         final: unitPrice,
         timestamp: Date.now(),
       },
-      stockSnapshot: stock,
+      stockSnapshot: availableStock,
     });
   }
 

@@ -257,9 +257,9 @@ export const Navbar = () => {
     { href: "/", label: "Inicio" },
     { href: "/productos", label: "Catálogo" },
     { href: "/nueva-coleccion", label: "Nueva Colección" },
-    { href: "/blogs/sobre-la-artista", label: "Sobre la Artista" }, // TODO: confirmar slug real del post
+    { href: "/blogs/9AHCeg1r5NEZU9L4GaNC", label: "Sobre la Artista" }, // TODO: confirmar slug real del post
     { href: `${basePath}?cat=${CATEGORIA_TALLERES_ID}`, label: "Talleres" },
-    { href: "/blogs/9AHCeg1r5NEZU9L4GaNC", label: "Blog" },
+    { href: "/blogs", label: "Blog" },
     { href: "/contactanos", label: "Contacto" }, // TODO: confirmar ruta real de contacto
   ];
 

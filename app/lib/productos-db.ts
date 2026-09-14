@@ -36,6 +36,26 @@ export interface Producto {
   [key: string]: any;
 }
 
+import { db } from "./firebase";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  getDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  onSnapshot
+} from "firebase/firestore";
+
+const COLLECTION = "productos";
+
+interface ProductosOpts {
+  incluirSinStock?: boolean;
+}
+
 /** Stock total: suma variantes si el producto tiene variaciones */
 export function getStockTotal(producto: Producto): number {
   const variants = Array.isArray(producto.stockVariants)
@@ -65,108 +85,6 @@ export function productoTieneStockDisponible(producto: Producto): boolean {
 async function filtrarProductosConStock(productos: Producto[], opts: ProductosOpts = {}) {
   if (opts.incluirSinStock) return productos;
   return productos.filter(productoTieneStockDisponible);
-}
-
-// Excluir productos de la bodega Nueva Colección de las listas regulares
-async function filtrarProductosExcluyendoNuevaColeccion(productos: Producto[]): Promise<Producto[]> {
-  const bodegaNuevaColeccion = await obtenerBodegaNuevaColeccion();
-  if (!bodegaNuevaColeccion) return productos;
-  return productos.filter(p => p.bodegaId !== bodegaNuevaColeccion.id);
-}
-
-// Obtener productos por subcategoría (usando los campos reales de Firestore)
-// Si opts.incluirSinStock es true, no filtra por stock (solo para admin/inventario)
-// Si opts.incluirNuevaColeccion es true, incluye productos de la bodega Nueva Colección
-export async function obtenerProductosPorSubcategoria(subcategoria, categoria, excludeId = null, opts: ProductosOpts = {}) {
-  // Filtra por subcategoria y categoria
-  const q = query(
-    collection(db, COLLECTION),
-    where("subcategoria", "==", subcategoria),
-    where("categoria", "==", categoria)
-  );
-  const snapshot = await getDocs(q);
-  let productos = snapshot.docs.map(doc => {
-    const data = doc.data();
-    const producto = { id: doc.id, ...data };
-
-    // Normalizar createdAt
-    if (!producto.createdAt) {
-      if (data.fechaCreacion && typeof data.fechaCreacion.toMillis === 'function') {
-        producto.createdAt = data.fechaCreacion.toMillis();
-      } else if (data.fechaCreacion && typeof data.fechaCreacion === 'number') {
-        producto.createdAt = data.fechaCreacion;
-      } else {
-        producto.createdAt = 0;
-      }
-    }
-
-    return producto;
-  });
-
-  productos = await filtrarProductosConStock(productos, opts);
-  if (!opts.incluirNuevaColeccion) {
-    productos = await filtrarProductosExcluyendoNuevaColeccion(productos);
-  }
-  if (excludeId) productos = productos.filter(p => p.id !== excludeId);
-  return productos;
-}
-
-// Obtener productos por subsubcategoría (último nivel, usando los campos reales de Firestore)
-// Si opts.incluirNuevaColeccion es true, incluye productos de la bodega Nueva Colección
-export async function obtenerProductosPorSubsubcategoria(subsubcategoria, subcategoria, categoria, excludeId = null, opts: ProductosOpts = {}) {
-  // Filtra por subsubcategoria, subcategoria y categoria
-  const q = query(
-    collection(db, COLLECTION),
-    where("subsubcategoria", "==", subsubcategoria),
-    where("subcategoria", "==", subcategoria),
-    where("categoria", "==", categoria)
-  );
-  const snapshot = await getDocs(q);
-  let productos = snapshot.docs.map(doc => {
-    const data = doc.data();
-    const producto = { id: doc.id, ...data };
-
-    // Normalizar createdAt
-    if (!producto.createdAt) {
-      if (data.fechaCreacion && typeof data.fechaCreacion.toMillis === 'function') {
-        producto.createdAt = data.fechaCreacion.toMillis();
-      } else if (data.fechaCreacion && typeof data.fechaCreacion === 'number') {
-        producto.createdAt = data.fechaCreacion;
-      } else {
-        producto.createdAt = 0;
-      }
-    }
-
-    return producto;
-  });
-
-  productos = await filtrarProductosConStock(productos, opts);
-  if (!opts.incluirNuevaColeccion) {
-    productos = await filtrarProductosExcluyendoNuevaColeccion(productos);
-  }
-  if (excludeId) productos = productos.filter(p => p.id !== excludeId);
-  return productos;
-}
-import { db } from "./firebase";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  getDoc,
-  doc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  onSnapshot
-} from "firebase/firestore";
-import { obtenerBodegaNuevaColeccion } from "./bodegas-db";
-
-const COLLECTION = "productos";
-
-interface ProductosOpts {
-  incluirSinStock?: boolean;
-  incluirNuevaColeccion?: boolean;
 }
 
 // Obtener productos por bodega
@@ -226,9 +144,75 @@ export async function crearProducto(producto: Producto): Promise<Producto> {
   return { ...cleanProducto, id: docRef.id, createdAt: Date.now() };
 }
 
+// Obtener productos por subcategoría (usando los campos reales de Firestore)
+// Si opts.incluirSinStock es true, no filtra por stock (solo para admin/inventario)
+export async function obtenerProductosPorSubcategoria(subcategoria, categoria, excludeId = null, opts: ProductosOpts = {}) {
+  // Filtra por subcategoria y categoria
+  const q = query(
+    collection(db, COLLECTION),
+    where("subcategoria", "==", subcategoria),
+    where("categoria", "==", categoria)
+  );
+  const snapshot = await getDocs(q);
+  let productos = snapshot.docs.map(doc => {
+    const data = doc.data();
+    const producto = { id: doc.id, ...data };
+
+    // Normalizar createdAt
+    if (!producto.createdAt) {
+      if (data.fechaCreacion && typeof data.fechaCreacion.toMillis === 'function') {
+        producto.createdAt = data.fechaCreacion.toMillis();
+      } else if (data.fechaCreacion && typeof data.fechaCreacion === 'number') {
+        producto.createdAt = data.fechaCreacion;
+      } else {
+        producto.createdAt = 0;
+      }
+    }
+
+    return producto;
+  });
+
+  productos = await filtrarProductosConStock(productos, opts);
+  if (excludeId) productos = productos.filter(p => p.id !== excludeId);
+  return productos;
+}
+
+// Obtener productos por subsubcategoría (último nivel, usando los campos reales de Firestore)
+// Si opts.incluirSinStock es true, no filtra por stock (solo para admin/inventario)
+export async function obtenerProductosPorSubsubcategoria(subsubcategoria, subcategoria, categoria, excludeId = null, opts: ProductosOpts = {}) {
+  // Filtra por subsubcategoria, subcategoria y categoria
+  const q = query(
+    collection(db, COLLECTION),
+    where("subsubcategoria", "==", subsubcategoria),
+    where("subcategoria", "==", subcategoria),
+    where("categoria", "==", categoria)
+  );
+  const snapshot = await getDocs(q);
+  let productos = snapshot.docs.map(doc => {
+    const data = doc.data();
+    const producto = { id: doc.id, ...data };
+
+    // Normalizar createdAt
+    if (!producto.createdAt) {
+      if (data.fechaCreacion && typeof data.fechaCreacion.toMillis === 'function') {
+        producto.createdAt = data.fechaCreacion.toMillis();
+      } else if (data.fechaCreacion && typeof data.fechaCreacion === 'number') {
+        producto.createdAt = data.fechaCreacion;
+      } else {
+        producto.createdAt = 0;
+      }
+    }
+
+    return producto;
+  });
+
+  productos = await filtrarProductosConStock(productos, opts);
+  if (excludeId) productos = productos.filter(p => p.id !== excludeId);
+  return productos;
+}
+
 // Obtener todos los productos
 // Si opts.incluirSinStock es true, no filtra por stock (solo para admin/inventario)
-// Si opts.incluirNuevaColeccion es true, incluye productos de la bodega Nueva Colección
 export async function obtenerProductos(opts: ProductosOpts = {}) {
   const snapshot = await getDocs(collection(db, COLLECTION));
   let productos = snapshot.docs.map(doc => {
@@ -252,15 +236,11 @@ export async function obtenerProductos(opts: ProductosOpts = {}) {
   });
 
   productos = await filtrarProductosConStock(productos, opts);
-  if (!opts.incluirNuevaColeccion) {
-    productos = await filtrarProductosExcluyendoNuevaColeccion(productos);
-  }
   return productos;
 }
 
 // Obtener productos por categoría (usando el campo real de Firestore)
 // Si opts.incluirSinStock es true, no filtra por stock (solo para admin/inventario)
-// Si opts.incluirNuevaColeccion es true, incluye productos de la bodega Nueva Colección
 export async function obtenerProductosPorCategoria(categoria, opts: ProductosOpts = {}) {
   if (!categoria) return [];
 
@@ -290,13 +270,8 @@ export async function obtenerProductosPorCategoria(categoria, opts: ProductosOpt
   }
 
   productos = await filtrarProductosConStock(productos, opts);
-  if (!opts.incluirNuevaColeccion) {
-    productos = await filtrarProductosExcluyendoNuevaColeccion(productos);
-  }
   return productos;
 }
-
-
 
 // Obtener producto por ID
 export async function obtenerProductoPorId(id: string): Promise<Producto | null> {
@@ -316,7 +291,7 @@ export async function eliminarProducto(id: string): Promise<void> {
 }
 
 // Obtener productos destacados
-// Si opts.incluirNuevaColeccion es true, incluye productos de la bodega Nueva Colección
+// Si opts.incluirSinStock es true, no filtra por stock (solo para admin/inventario)
 export async function obtenerProductosDestacados(opts: ProductosOpts = {}) {
   const q = query(collection(db, COLLECTION), where("destacado", "==", true));
   const snapshot = await getDocs(q);
@@ -339,9 +314,6 @@ export async function obtenerProductosDestacados(opts: ProductosOpts = {}) {
   });
 
   productos = await filtrarProductosConStock(productos, opts);
-  if (!opts.incluirNuevaColeccion) {
-    productos = await filtrarProductosExcluyendoNuevaColeccion(productos);
-  }
   return productos;
 }
 
@@ -372,9 +344,6 @@ export function onProductosDestacadosChange(
     });
 
     productos = await filtrarProductosConStock(productos, opts);
-    if (!opts.incluirNuevaColeccion) {
-      productos = await filtrarProductosExcluyendoNuevaColeccion(productos);
-    }
     callback(productos);
   });
 }

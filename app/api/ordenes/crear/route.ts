@@ -3,6 +3,7 @@ import admin from "../../../lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { Resend } from "resend";
 import { getCatalogPricing } from "../../../lib/pricing";
+import { findMatchingVariant } from "../../../lib/order-checkout-utils";
 
 /**
  * 🛒 ENDPOINT: Crear Orden con Stock Deduction
@@ -214,12 +215,20 @@ export async function POST(req: NextRequest) {
         if (!item) continue;
 
         const cantidad = Number(item.cantidad || 1);
-        const stock = Number(data.stock || 0);
 
         // ✅ VALIDACIÓN: Stock suficiente (dentro de la transacción)
-        if (stock < cantidad) {
+        // Verificar stock de variante si el producto tiene variantes y se seleccionó una
+        const variantMatch = findMatchingVariant(data, item);
+        const availableStock = variantMatch
+          ? Number(variantMatch.variant?.cantidad ?? variantMatch.variant?.stock ?? 0)
+          : Number(data.stock ?? 0);
+
+        if (availableStock < cantidad) {
+          const variantInfo = variantMatch
+            ? ` (variante: ${Object.values(variantMatch.variant?.attributes || {}).join(', ') || variantMatch.variant?.talla || variantMatch.variant?.color || 'seleccionada'})`
+            : '';
           throw new Error(
-            `Stock insuficiente para "${data.nombre}". Disponibles: ${stock}, Solicitados: ${cantidad}`
+            `Stock insuficiente para "${data.nombre}"${variantInfo}. Disponibles: ${availableStock}, Solicitados: ${cantidad}`
           );
         }
 
@@ -239,7 +248,7 @@ export async function POST(req: NextRequest) {
           precioUnitario: finalPrice,
           precioFinal: finalPrice,
           subtotal: lineTotal,
-          stockSnapshot: stock,
+          stockSnapshot: availableStock,
           bodegaId: data.bodegaId || "technothings",
           precioSnapshot: {
             base: basePrice,

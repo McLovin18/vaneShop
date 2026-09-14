@@ -41,16 +41,19 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Obtener todas las órdenes
+    // Obtener todas las órdenes con límite y ordenamiento
     console.log("🔍 [ordenes] Buscando órdenes en Firestore...");
-    const ordenesSnap = await db.collection("ordenes").get();
+    const ordenesSnap = await db.collection("ordenes")
+      .orderBy("createdAt", "desc")
+      .limit(100)
+      .get();
     console.log("✅ [ordenes] Órdenes encontradas:", ordenesSnap.size);
-    
+
     const ordenes = ordenesSnap.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
-    
+
     console.log("✅ [ordenes] Devolviendo", ordenes.length, "órdenes");
     return NextResponse.json(ordenes, {
       headers: {

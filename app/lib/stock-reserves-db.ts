@@ -1,13 +1,13 @@
 /**
  * 🔒 STOCK RESERVATION SYSTEM
- * 
+ *
  * Maneja la reserva temporal de stock para evitar race conditions.
  * Cuando un usuario inicia checkout/proforma:
  * 1. Se crea una reserva de stock (expira en 10 min)
  * 2. Se deducen del stock disponible
  * 3. Si usuario paga/admin aprueba → confirmar reserva
  * 4. Si expira o se rechaza → liberar stock
- * 
+ *
  * Esto previene:
  * - Overselling (2 usuarios compran mismo stock)
  * - Stock bloqueado por carritos abandonados
@@ -16,6 +16,7 @@
 
 import admin from "./firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
+import { findMatchingVariant } from "./order-checkout-utils";
 
 const COLLECTION_RESERVES = "stockReserves";
 const RESERVE_DURATION_MS = 10 * 60 * 1000; // 10 minutos
@@ -23,6 +24,11 @@ const RESERVE_DURATION_MS = 10 * 60 * 1000; // 10 minutos
 interface StockReserveItem {
   productId: string;
   cantidad: number;
+  variantKey?: string;
+  selectedVariations?: Record<string, string>;
+  variationAttributeIds?: string[];
+  selectedTalla?: string;
+  selectedColor?: string;
   snapshot: {
     precio: number;
     stock: number;
@@ -79,16 +85,32 @@ export async function crearReservaStock(
           throw new Error(`Producto ${item.productId} no existe`);
         }
 
-        const currentStock = Number(snap.data()?.stock || 0);
-        if (currentStock < item.cantidad) {
+        const data = snap.data();
+        // Verificar stock de variante si el producto tiene variantes y se seleccionó una
+        const variantMatch = findMatchingVariant(data, {
+          id: item.productId,
+          variantKey: item.variantKey,
+          selectedVariations: item.selectedVariations,
+          variationAttributeIds: item.variationAttributeIds,
+          selectedTalla: item.selectedTalla,
+          selectedColor: item.selectedColor,
+        });
+        const availableStock = variantMatch
+          ? Number(variantMatch.variant?.cantidad ?? variantMatch.variant?.stock ?? 0)
+          : Number(data?.stock ?? 0);
+
+        if (availableStock < item.cantidad) {
+          const variantInfo = variantMatch
+            ? ` (variante: ${Object.values(variantMatch.variant?.attributes || {}).join(', ') || variantMatch.variant?.talla || variantMatch.variant?.color || 'seleccionada'})`
+            : '';
           throw new Error(
-            `Stock insuficiente para ${snap.data()?.nombre}. Disponibles: ${currentStock}, Solicitados: ${item.cantidad}`
+            `Stock insuficiente para ${data?.nombre}${variantInfo}. Disponibles: ${availableStock}, Solicitados: ${item.cantidad}`
           );
         }
 
         validations.push({
           productId: item.productId,
-          available: currentStock,
+          available: availableStock,
           requested: item.cantidad,
         });
       }
