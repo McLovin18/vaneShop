@@ -37,7 +37,7 @@ type Producto = {
   hasVariations?: boolean;
   stockVariants?: StockVariant[];
   variationAttributeIds?: string[];
-  precio: string;
+  precio?: string;
   descuento?: number;
   categoria: string;
   subcategoria: string;
@@ -359,7 +359,7 @@ export default function ProductoForm({ initialData = null, onSave, onCancel }: P
   const subsubcategoriasOptions = subcategoriasOptions.find((s: any) => s.id === subcategoria)?.subcategorias || [];
   const subsubcategoriaRequired = subsubcategoriasOptions.length > 0;
 
-  // ── Manejo de imágenes (por URL o archivo) ──
+  // ── Manejo de imágenes/videos (por URL o archivo) ──
   async function handleAddImagen(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
     // Reseteamos el input ya mismo para poder volver a elegir el mismo archivo después
@@ -368,10 +368,24 @@ export default function ProductoForm({ initialData = null, onSave, onCancel }: P
 
     setProcesandoImagenes(true);
     try {
-      // Comprimimos en el navegador antes de guardar en memoria: crítico
+      // Separamos videos de imágenes
+      const videos: File[] = [];
+      const images: File[] = [];
+
+      files.forEach((f) => {
+        if (f.type.startsWith("video/")) {
+          videos.push(f);
+        } else {
+          images.push(f);
+        }
+      });
+
+      // Comprimimos imágenes en el navegador antes de guardar en memoria: crítico
       // para fotos de cámara de iPhone (varios MB, resolución muy alta).
-      const comprimidas = await Promise.all(files.map((f) => compressImageFile(f)));
-      setImagenes((prev) => [...prev, ...comprimidas]);
+      const comprimidas = await Promise.all(images.map((f) => compressImageFile(f)));
+
+      // Videos no se comprimen, se agregan directamente
+      setImagenes((prev) => [...prev, ...comprimidas, ...videos]);
     } finally {
       setProcesandoImagenes(false);
     }
@@ -630,14 +644,23 @@ export default function ProductoForm({ initialData = null, onSave, onCancel }: P
                   key={isFile ? `${img.name}-${img.size}-${img.lastModified}` : `url-${idx}`}
                   className="group relative rounded-2xl border-2 border-slate-200 transition-all hover:border-rose-300 hover:shadow-md"
                 >
-                  {/* Preview de imagen */}
+                  {/* Preview de imagen/video */}
                   {url && (url.startsWith("http") || url.startsWith("blob:")) ? (
-                    <img
-                      src={url}
-                      alt={`foto-${idx}`}
-                      loading="lazy"
-                      className="w-full aspect-square object-cover rounded-xl"
-                    />
+                    isFile && img.type?.startsWith("video/") ? (
+                      <video
+                        src={url}
+                        className="w-full aspect-square object-cover rounded-xl"
+                        muted
+                        controls={false}
+                      />
+                    ) : (
+                      <img
+                        src={url}
+                        alt={`foto-${idx}`}
+                        loading="lazy"
+                        className="w-full aspect-square object-cover rounded-xl"
+                      />
+                    )
                   ) : (
                     <div className="w-full aspect-square rounded-xl bg-slate-100 flex items-center justify-center">
                       <span className="material-icons-round text-3xl text-slate-300">image_not_supported</span>
@@ -706,7 +729,7 @@ export default function ProductoForm({ initialData = null, onSave, onCancel }: P
           <input
             type="file"
             multiple
-            accept="image/*"
+            accept="image/*,video/*"
             onChange={handleAddImagen}
             disabled={procesandoImagenes}
             className="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base file:mr-4 file:rounded-full file:border-0 file:bg-rose-500 file:px-4 file:py-2 file:text-white file:font-semibold disabled:opacity-60"
@@ -1225,8 +1248,8 @@ export default function ProductoForm({ initialData = null, onSave, onCancel }: P
 
       <div className="grid gap-5 md:max-w-2xl md:grid-cols-2">
         <label className="block md:col-span-2">
-          <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">Precio base</span>
-          <input className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-lg font-semibold text-slate-900 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100" type="number" inputMode="decimal" min="0" value={precio} onChange={e => setPrecio(e.target.value)} required />
+          <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">Precio base (opcional)</span>
+          <input className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-lg font-semibold text-slate-900 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100" type="number" inputMode="decimal" min="0" value={precio} onChange={e => setPrecio(e.target.value)} placeholder="Dejar vacío si no tiene precio" />
         </label>
         <label className="block">
           <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">Descuento (%)</span>

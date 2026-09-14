@@ -94,3 +94,13 @@ export function escucharBodegas(callback: (bodegas: Bodega[]) => void) {
   );
   return unsub;
 }
+
+// Obtener la bodega marcada como Nueva Colección
+export async function obtenerBodegaNuevaColeccion(): Promise<Bodega | null> {
+  const snapshot = await getDocs(collection(db, COLLECTION));
+  const bodegas = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  } as Bodega));
+  return bodegas.find(b => b.esNuevaColeccion) || null;
+}

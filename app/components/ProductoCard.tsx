@@ -356,6 +356,8 @@ function ProductoCard({
   const { basePrice, discount, hasDiscount, fakeOldPrice, finalPrice } =
     getCatalogPricing(producto);
 
+  const hasPrice = finalPrice > 0;
+
   const getDetailUrl = () => {
     let detailUrl = `/product-detail?id=${producto.id}`;
     try {
@@ -436,22 +438,31 @@ function ProductoCard({
         <div className="pc-card" onClick={onClick || goToDetail}>
           {/* ── IMAGEN ── */}
           <div className="pc-img-wrap">
-            <Image
-              src={producto.imagenes?.[0] || "/no-image.png"}
-              alt={producto.nombre}
-              fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-contain"
-              style={{
-                opacity: 0,
-                transition: "opacity 0.4s ease",
-              }}
-              onLoad={(e) => {
-                (e.currentTarget as HTMLImageElement).style.opacity = "1";
-              }}
-              priority={index < 4}
-              loading={index < 4 ? "eager" : "lazy"}
-            />
+            {producto.imagenes?.[0]?.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+              <video
+                src={producto.imagenes[0]}
+                className="w-full h-full object-contain"
+                muted
+                playsInline
+              />
+            ) : (
+              <Image
+                src={producto.imagenes?.[0] || "/no-image.png"}
+                alt={producto.nombre}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                className="object-contain"
+                style={{
+                  opacity: 0,
+                  transition: "opacity 0.4s ease",
+                }}
+                onLoad={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.opacity = "1";
+                }}
+                priority={index < 4}
+                loading={index < 4 ? "eager" : "lazy"}
+              />
+            )}
 
             {/* Badge descuento */}
             {hasDiscount && (
@@ -484,19 +495,27 @@ function ProductoCard({
             <p className="pc-name">{producto.nombre}</p>
 
             <div className="pc-prices">
-              {hasDiscount && (
-                <span className="pc-price-old">
-                  ${fakeOldPrice.toFixed(2)}
+              {hasPrice ? (
+                <>
+                  {hasDiscount && (
+                    <span className="pc-price-old">
+                      ${fakeOldPrice.toFixed(2)}
+                    </span>
+                  )}
+                  <span className="pc-price-final">
+                    ${finalPrice.toFixed(2)}{" "}
+                  </span>
+                </>
+              ) : (
+                <span className="pc-price-final text-slate-400">
+                  Sin precio
                 </span>
               )}
-              <span className="pc-price-final">
-                ${finalPrice.toFixed(2)}{" "}
-              </span>
             </div>
 
             {(showCart || showEye) && (
               <div className="pc-actions">
-                {showCart && (
+                {showCart && hasPrice && (
                   <button
                     onClick={(e) => {
                       e.preventDefault();

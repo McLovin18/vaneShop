@@ -331,6 +331,8 @@ export default function ProductDetailPage({ params }) {
     precio: basePrice,
   });
 
+  const hasPrice = finalPrice > 0;
+
   const avgRating = reviews.length > 0
     ? reviews.reduce((a, b) => a + b.rating, 0) / reviews.length
     : 0;
@@ -443,11 +445,19 @@ export default function ProductDetailPage({ params }) {
                   -{discount}%
                 </span>
               )}
-              <img
-                src={producto.imagenes[imgIdx]}
-                alt={producto.nombre}
-                className="w-full h-full object-contain p-5"
-              />
+              {producto.imagenes[imgIdx]?.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                <video
+                  src={producto.imagenes[imgIdx]}
+                  controls
+                  className="w-full h-full object-contain p-5"
+                />
+              ) : (
+                <img
+                  src={producto.imagenes[imgIdx]}
+                  alt={producto.nombre}
+                  className="w-full h-full object-contain p-5"
+                />
+              )}
               {producto.imagenes.length > 1 && imgIdx > 0 && (
                 <button
                   onClick={() => setImgIdx(imgIdx - 1)}
@@ -479,7 +489,11 @@ export default function ProductDetailPage({ params }) {
                         : "border-transparent opacity-50 hover:opacity-80"
                     }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-contain p-1.5" />
+                    {img?.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                      <video src={img} className="w-full h-full object-contain p-1.5" muted />
+                    ) : (
+                      <img src={img} alt="" className="w-full h-full object-contain p-1.5" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -584,17 +598,25 @@ export default function ProductDetailPage({ params }) {
             )}
 
             <div className="flex items-baseline gap-3 flex-wrap">
-              {hasDiscount && (
-                <span className="text-sm text-slate-400 dark:text-white/20 line-through">
-                  ${fakeOldPrice?.toFixed(2)}
-                </span>
-              )}
-              <span className="text-3xl font-extrabold text-slate-800 dark:text-white">
-                ${finalPrice.toFixed(2)}
-              </span>
-              {hasDiscount && (
-                <span className="text-xs font-semibold text-red-500 bg-red-50 dark:bg-red-400/10 px-2 py-0.5 rounded-full">
-                  {discount}% OFF
+              {hasPrice ? (
+                <>
+                  {hasDiscount && (
+                    <span className="text-sm text-slate-400 dark:text-white/20 line-through">
+                      ${fakeOldPrice?.toFixed(2)}
+                    </span>
+                  )}
+                  <span className="text-3xl font-extrabold text-slate-800 dark:text-white">
+                    ${finalPrice.toFixed(2)}
+                  </span>
+                  {hasDiscount && (
+                    <span className="text-xs font-semibold text-red-500 bg-red-50 dark:bg-red-400/10 px-2 py-0.5 rounded-full">
+                      {discount}% OFF
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="text-3xl font-extrabold text-slate-400 dark:text-white/50">
+                  Sin precio
                 </span>
               )}
             </div>
@@ -729,22 +751,24 @@ export default function ProductDetailPage({ params }) {
 
             {/* Acciones */}
             <div className="flex gap-2">
-              <button
-                onClick={handleAddCart}
-                disabled={maxCantidad === 0 || (hasVariations && variationAttributeIds.length > 0 && !variationAttributeIds.every(attrId => selectedVariations[attrId]))}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold border transition-all ${
-                  maxCantidad === 0 || (hasVariations && variationAttributeIds.length > 0 && !variationAttributeIds.every(attrId => selectedVariations[attrId]))
-                    ? "bg-white text-slate-300 border-slate-200 cursor-not-allowed opacity-50 shadow-none"
-                    : inCart
-                      ? "bg-[var(--card)] text-[var(--text)] border-[var(--primary)] hover:border-[var(--primaryHover)] hover:shadow-md"
-                      : "bg-[var(--card)] text-[var(--text)] border-[var(--border)] hover:border-[var(--primary)] hover:shadow-md"
-                }`}
-              >
-                <span className="material-icons-round text-[18px]">
-                  {inCart ? "remove_shopping_cart" : "add_shopping_cart"}
-                </span>
-                {inCart ? "Quitar del carrito" : "Añadir al carrito"}
-              </button>
+              {hasPrice && (
+                <button
+                  onClick={handleAddCart}
+                  disabled={maxCantidad === 0 || (hasVariations && variationAttributeIds.length > 0 && !variationAttributeIds.every(attrId => selectedVariations[attrId]))}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold border transition-all ${
+                    maxCantidad === 0 || (hasVariations && variationAttributeIds.length > 0 && !variationAttributeIds.every(attrId => selectedVariations[attrId]))
+                      ? "bg-white text-slate-300 border-slate-200 cursor-not-allowed opacity-50 shadow-none"
+                      : inCart
+                        ? "bg-[var(--card)] text-[var(--text)] border-[var(--primary)] hover:border-[var(--primaryHover)] hover:shadow-md"
+                        : "bg-[var(--card)] text-[var(--text)] border-[var(--border)] hover:border-[var(--primary)] hover:shadow-md"
+                  }`}
+                >
+                  <span className="material-icons-round text-[18px]">
+                    {inCart ? "remove_shopping_cart" : "add_shopping_cart"}
+                  </span>
+                  {inCart ? "Quitar del carrito" : "Añadir al carrito"}
+                </button>
+              )}
 
               {isLogged && (
                 <button

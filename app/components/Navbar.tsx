@@ -29,6 +29,11 @@ const BRAND = {
   textMuted: "color-mix(in srgb, #f7ede3 76%, transparent)",
 };
 
+// ID de la categoría "Talleres" — ya tiene su propio link fijo en el menú
+// principal, así que la ocultamos del listado dinámico de categorías
+// (mobile drawer) para que no aparezca duplicada.
+const CATEGORIA_TALLERES_ID = "1788458993106";
+
 // ─────────────────────────────────────────────
 // Acordeón de categorías para el drawer móvil
 // ─────────────────────────────────────────────
@@ -44,13 +49,17 @@ function MobileCategoriesAccordion({ basePath }: { basePath: string }) {
     return () => unsub();
   }, []);
 
+  const categoriasVisibles = categorias.filter(
+    (cat) => cat.id !== CATEGORIA_TALLERES_ID
+  );
+
   return (
     <div className="flex flex-col gap-1 my-3">
       <p className="text-sm font-semibold uppercase tracking-wider px-2 mb-1"
         style={{ color: BRAND.textMuted }}>
         Categorías
       </p>
-      {categorias.map((cat) => (
+      {categoriasVisibles.map((cat) => (
         <div key={cat.id}>
           <button
             className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-base font-medium transition-colors"
@@ -162,8 +171,6 @@ export const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [openCatId, setOpenCatId] = useState<string | null>(null);
-  const [openSubId, setOpenSubId] = useState<string | null>(null);
   const { user, carrito } = useUser();
   const [windowWidth, setWindowWidth] = useState<number | null>(null);
 
@@ -175,25 +182,12 @@ export const Navbar = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Categorías integradas
-  const [categorias, setCategorias] = useState<any[]>([]);
-
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     // Solo cargar productos para búsqueda en desktop y no en WebViews
     if (typeof window !== 'undefined' && window.innerWidth >= 1024 && !isWebViewOrLowPerformance()) {
       obtenerProductos().then((prods) => setAllProducts(prods));
-    }
-  }, []);
-
-  useEffect(() => {
-    // Solo suscribirse a categorías en desktop y no en WebViews
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024 && !isWebViewOrLowPerformance()) {
-      const unsub = onSnapshot(collection(db, "categorias"), (snap) => {
-        setCategorias(sortCategoriasByOrder(mapCategorySnapshot(snap.docs)));
-      });
-      return () => unsub();
     }
   }, []);
 
@@ -256,10 +250,17 @@ export const Navbar = () => {
     ? "/admin/products-by-category"
     : "/products-by-category";
 
+  // Orden fijo del menú principal (desktop y mobile).
+  // Las "Categorías" dinámicas ya NO viven aquí — solo se muestran
+  // en el drawer móvil, vía <MobileCategoriesAccordion />.
   const links = [
     { href: "/", label: "Inicio" },
     { href: "/productos", label: "Catálogo" },
-    { href: "/blogs", label: "Blog" },
+    { href: "/nueva-coleccion", label: "Nueva Colección" },
+    { href: "/blogs/sobre-la-artista", label: "Sobre la Artista" }, // TODO: confirmar slug real del post
+    { href: `${basePath}?cat=${CATEGORIA_TALLERES_ID}`, label: "Talleres" },
+    { href: "/blogs/9AHCeg1r5NEZU9L4GaNC", label: "Blog" },
+    { href: "/contactanos", label: "Contacto" }, // TODO: confirmar ruta real de contacto
   ];
 
 
@@ -504,121 +505,6 @@ export const Navbar = () => {
             ) : null}
           </div>
         </div>
-
-        <div className="hidden items-center justify-center gap-1 px-6 border-t flex-wrap" style={{ borderColor: BRAND.border }}>
-          {/* Categorías dinámicas */}
-          {categorias.map((cat) => (
-            <div
-              key={cat.id}
-              className="relative group shrink-0"
-              onMouseEnter={() => windowWidth !== null && windowWidth >= 1024 && setOpenCatId(cat.id)}
-              onMouseLeave={() => windowWidth !== null && windowWidth >= 1024 && setOpenCatId(null)}
-            >
-              {cat.subcategorias?.length > 0 ? (
-                <button
-                  onClick={() => setOpenCatId(openCatId === cat.id ? null : cat.id)}
-                  className="flex items-center gap-1 px-3 py-2.5 text-base font-medium whitespace-nowrap transition-shadow rounded-xl hover:shadow-sm"
-                  style={{ color: BRAND.white }}
-                >
-                  {cat.icono && (
-                    <span className="material-icons-round" style={{ fontSize: 18, color: BRAND.gold }}>{cat.icono}</span>
-                  )}
-                  <span>{cat.nombre}</span>
-                  <span
-                    className="material-icons-round transition-transform duration-200"
-                    style={{ fontSize: 16, color: BRAND.white, transform: openCatId === cat.id ? "rotate(180deg)" : "rotate(0deg)" }}
-                  >
-                    arrow_drop_down
-                  </span>
-                </button>
-              ) : (
-                <Link
-                  href={`${basePath}?cat=${cat.id}`}
-                  className="flex items-center gap-1 px-3 py-2.5 text-base font-medium whitespace-nowrap transition-shadow rounded-xl hover:shadow-sm"
-                  style={{ color: BRAND.white }}
-                >
-                  {cat.icono && (
-                    <span className="material-icons-round" style={{ fontSize: 18, color: BRAND.gold }}>{cat.icono}</span>
-                  )}
-                  <span>{cat.nombre}</span>
-                </Link>
-              )}
-
-              {/* Dropdown nivel 1 */}
-              {cat.subcategorias?.length > 0 && (
-                <div
-                  className="absolute left-0 top-full min-w-52 rounded-2xl border hover:text-black shadow-xl py-1.5 z-50"
-                  style={{
-                    background: BRAND.bgSoft,
-                    borderColor: BRAND.border,
-                    opacity: openCatId === cat.id ? "1" : "0",
-                    pointerEvents: openCatId === cat.id ? "auto" : "none",
-                    transform: openCatId === cat.id ? "translateY(0)" : "translateY(-10px)",
-                    transition: "all 150ms",
-                  }}
-                >
-                  {cat.subcategorias.map((sub: any) => (
-                    <div
-                      key={sub.id}
-                      className="relative group/sub"
-                      onMouseEnter={() => windowWidth !== null && windowWidth >= 1024 && setOpenSubId(sub.id)}
-                      onMouseLeave={() => windowWidth !== null && windowWidth >= 1024 && setOpenSubId(null)}
-                    >
-                      {sub.subcategorias?.length > 0 ? (
-                        <>
-                          <button
-                            onClick={() => setOpenSubId(openSubId === sub.id ? null : sub.id)}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm transition-shadow hover:shadow-sm rounded-md"
-                          >
-                            <span style={{ color: BRAND.white }} className="group-hover/sub:opacity-80 transition-opacity">{sub.nombre}</span>
-                            <span
-                              className="material-icons-round text-sm transition-transform duration-200"
-                              style={{ color: BRAND.gold, transform: openSubId === sub.id ? "rotate(90deg)" : "rotate(0deg)" }}
-                            >
-                              chevron_right
-                            </span>
-                          </button>
-
-                          {/* Dropdown nivel 2 — sibling del botón, no anidado dentro (evita <a> dentro de <button>) */}
-                          <div
-                            className="absolute left-full top-0 ml-1 min-w-44 rounded-2xl border shadow-xl py-1.5 z-60"
-                            style={{
-                              background: BRAND.bgSoft,
-                              borderColor: BRAND.border,
-                              opacity: openSubId === sub.id ? "1" : "0",
-                              pointerEvents: openSubId === sub.id ? "auto" : "none",
-                              transform: openSubId === sub.id ? "translateX(0)" : "translateX(-10px)",
-                              transition: "all 150ms",
-                            }}
-                          >
-                            {sub.subcategorias.map((subsub: any) => (
-                              <Link
-                                key={subsub.id}
-                                href={`${basePath}?cat=${cat.id}&sub=${sub.id}&subsub=${subsub.id}`}
-                                className="block px-4 py-2.5 text-sm transition-colors"
-                                style={{ color: BRAND.white }}
-                              >
-                                <span className="hover:opacity-80">{subsub.nombre}</span>
-                              </Link>
-                            ))}
-                          </div>
-                        </>
-                      ) : (
-                        <Link
-                          href={`${basePath}?cat=${cat.id}&sub=${sub.id}`}
-                          className="block px-4 py-2.5 text-sm transition-shadow hover:shadow-sm rounded-md"
-                          style={{ color: BRAND.white }}
-                        >
-                          <span className="group-hover/sub:opacity-80 transition-opacity">{sub.nombre}</span>
-                        </Link>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
       </nav>
 
       {/* ══════════════════ MOBILE DRAWER ══════════════════ */}
@@ -734,8 +620,10 @@ export const Navbar = () => {
                 )}
               </form>
 
-              {/* Links */}
-              {links.map((link) => (
+              {/* Links — orden fijo del menú móvil:
+                  Inicio, Catálogo, Categorías, Nueva Colección,
+                  Sobre la Artista, Talleres, Blog, Contacto */}
+              {links.slice(0, 2).map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
@@ -746,8 +634,20 @@ export const Navbar = () => {
                 </a>
               ))}
 
-              {/* Categorías en acordeón */}
+              {/* Categorías en acordeón — solo visibles en mobile,
+                  van justo después de "Catálogo" y antes de "Nueva Colección" */}
               <MobileCategoriesAccordion basePath={basePath} />
+
+              {links.slice(2).map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-base font-medium transition-colors"
+                  style={{ color: BRAND.white }}
+                >
+                  {link.label}
+                </a>
+              ))}
 
               <div className="border-t my-2" style={{ borderColor: BRAND.border }} />
 

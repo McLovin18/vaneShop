@@ -5,7 +5,6 @@ import Link from "next/link";
 
 const Contacto: React.FC = () => {
   const [copied, setCopied] = useState(false);
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,7 +22,8 @@ const Contacto: React.FC = () => {
   }, []);
 
   const copyEmail = () => {
-    navigator.clipboard.writeText("marcaestilo593@gmail.com");
+    // TODO: confirmar el correo real de vaneseshop — este es un placeholder
+    navigator.clipboard.writeText("hola@vaneseshop.com");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -32,15 +32,6 @@ const Contacto: React.FC = () => {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@1,300;1,400&display=swap');
-
-        
-        
-        
-        
-        
-        
-        
-        
 
         /* ─── ROOT ─── */
         .ct-root {
@@ -151,7 +142,7 @@ const Contacto: React.FC = () => {
           font-size: clamp(70px, 14vw, 130px);
           letter-spacing: 0.05em;
           line-height: 0.88;
-          color: #fff;
+          color: #3d2b20;
           margin-bottom: 20px;
         }
 
@@ -167,7 +158,7 @@ const Contacto: React.FC = () => {
         .ct-subtitle {
           position: relative;
           z-index: 2;
-          color: #b8b3d0;
+          color: color-mix(in srgb, #3d2b20 70%, transparent);
           font-size: 13px;
           font-weight: 300;
           max-width: 380px;
@@ -210,8 +201,8 @@ const Contacto: React.FC = () => {
         /* ─── CARD BASE ─── */
         .ct-card {
           border-radius: 14px;
-          border: 1px solid rgba(255,255,255,0.05);
-          background: #0e0e12;
+          border: 1px solid rgba(247,237,227,0.08);
+          background: #3d2b20;
           padding: 28px;
           cursor: pointer;
           transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
@@ -244,7 +235,7 @@ const Contacto: React.FC = () => {
         /* ─── CARD WHATSAPP — FEATURED ─── */
         .ct-card-wa {
           grid-column: 1 / -1;
-          background: linear-gradient(135deg, #0e0e12 0%, #131210 100%);
+          background: linear-gradient(135deg, #3d2b20 0%, #2f2118 100%);
           border-color: rgba(220,180,50,0.18);
           flex-direction: row;
           align-items: center;
@@ -287,14 +278,14 @@ const Contacto: React.FC = () => {
           font-weight: 600;
           letter-spacing: 0.2em;
           text-transform: uppercase;
-          color: #c4bedd;
+          color: color-mix(in srgb, #f7ede3 70%, transparent);
         }
 
         .ct-card-value {
           font-family: 'Bebas Neue', sans-serif;
           font-size: 28px;
           letter-spacing: 0.04em;
-          color: #ffffff;
+          color: #f7ede3;
           line-height: 1;
         }
 
@@ -302,13 +293,13 @@ const Contacto: React.FC = () => {
           font-family: 'Bebas Neue', sans-serif;
           font-size: clamp(32px, 5vw, 44px);
           letter-spacing: 0.04em;
-          color: #ffffff;
+          color: #f7ede3;
           line-height: 1;
         }
 
         .ct-card-sub {
           font-size: 12px;
-          color: #c4bedd;
+          color: color-mix(in srgb, #f7ede3 70%, transparent);
           font-weight: 300;
           line-height: 1.5;
         }
@@ -374,15 +365,15 @@ const Contacto: React.FC = () => {
           justify-content: space-between;
           align-items: center;
           padding: 8px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.04);
+          border-bottom: 1px solid rgba(247,237,227,0.06);
           font-size: 12px;
         }
 
         .ct-horario-row:last-child { border-bottom: none; }
 
-        .ct-horario-day { color: #c8c3dc; font-weight: 400; }
-        .ct-horario-time { color: #e8e4f0; font-weight: 500; }
-        .ct-horario-closed { color: #a09abc; }
+        .ct-horario-day { color: color-mix(in srgb, #f7ede3 70%, transparent); font-weight: 400; }
+        .ct-horario-time { color: #f7ede3; font-weight: 500; }
+        .ct-horario-closed { color: color-mix(in srgb, #f7ede3 45%, transparent); }
 
         /* ─── SOCIAL LINK ─── */
         .ct-social-link {
@@ -390,7 +381,7 @@ const Contacto: React.FC = () => {
           align-items: center;
           gap: 10px;
           padding: 10px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.04);
+          border-bottom: 1px solid rgba(247,237,227,0.06);
           text-decoration: none;
           transition: padding-left 0.2s;
           color: inherit;
@@ -404,7 +395,7 @@ const Contacto: React.FC = () => {
 
         .ct-social-platform {
           font-size: 11px;
-          color: #c4bedd;
+          color: color-mix(in srgb, #f7ede3 70%, transparent);
           font-weight: 600;
           letter-spacing: 0.1em;
           text-transform: uppercase;
@@ -414,7 +405,7 @@ const Contacto: React.FC = () => {
 
         .ct-social-handle {
           font-size: 13px;
-          color: #e8e4f0;
+          color: #f7ede3;
           font-weight: 400;
         }
 
@@ -434,7 +425,7 @@ const Contacto: React.FC = () => {
 
         /* ─── LOCATION CARD ─── */
         .ct-location-card {
-          background: linear-gradient(135deg, #0e0e12, #0c0c10);
+          background: linear-gradient(135deg, #3d2b20, #2f2118);
         }
 
         .ct-location-pin {
@@ -462,14 +453,14 @@ const Contacto: React.FC = () => {
           position: relative;
           z-index: 1;
           text-align: center;
-          border-top: 1px solid rgba(255,255,255,0.04);
+          border-top: 1px solid rgba(247,237,227,0.06);
           padding: 40px 24px;
           margin-top: 10px;
         }
 
         .ct-footer p {
           font-size: 12px;
-          color: #a09abc;
+          color: color-mix(in srgb, #3d2b20 60%, transparent);
           margin-bottom: 16px;
           font-weight: 300;
         }
@@ -494,18 +485,18 @@ const Contacto: React.FC = () => {
 
           <div className="ct-badge">
             <div className="ct-badge-dot" />
-            MarcaEstilo · Guayaquil
+            vaneshop · Guayaquil
           </div>
 
           <h1 className="ct-title">
             CONTÁCTANOS
-            <span>estamos aquí para ti</span>
+            <span>piezas con identidad e historia</span>
           </h1>
 
           <div className="ct-divider" />
 
           <p className="ct-subtitle">
-            Respuesta rápida por WhatsApp. También puedes escribirnos al correo o seguirnos en redes.
+            Cuéntanos qué buscas y te ayudamos a encontrar o crear la pieza ideal. Respuesta rápida por WhatsApp.
           </p>
         </div>
 
@@ -514,7 +505,7 @@ const Contacto: React.FC = () => {
 
           {/* WHATSAPP — featured */}
           <a
-            href="https://wa.me/593999369105"
+            href="https://wa.me/593984880468"
             target="_blank"
             rel="noreferrer"
             className="ct-card ct-card-wa"
@@ -529,7 +520,7 @@ const Contacto: React.FC = () => {
               </div>
 
               <div className="ct-card-label" style={{ marginBottom: 8 }}>WhatsApp directo</div>
-              <div className="ct-card-value-lg">+593 99 936 9105</div>
+              <div className="ct-card-value-lg">+593 98 488 0468</div>
               <p className="ct-card-sub" style={{ marginTop: 10 }}>
                 La forma más rápida de contactarnos.<br />
                 <strong>Respuesta en minutos</strong> durante horario de atención.
@@ -544,7 +535,7 @@ const Contacto: React.FC = () => {
                 </svg>
                 Abrir WhatsApp
               </div>
-              <p style={{ fontSize: 10, color: "#3a3750", letterSpacing: "0.05em" }}>
+              <p style={{ fontSize: 10, color: "color-mix(in srgb, #f7ede3 30%, transparent)", letterSpacing: "0.05em" }}>
                 También puedes escanearnos desde otro dispositivo
               </p>
             </div>
@@ -559,6 +550,7 @@ const Contacto: React.FC = () => {
             </div>
             <div className="ct-card-label">Horario de atención</div>
 
+            {/* TODO: confirmar horario real de vaneseshop — se mantiene el de referencia por ahora */}
             <div style={{ marginTop: 4 }}>
               {[
                 { day: "Lunes – Viernes", time: "9:00 – 18:00" },
@@ -590,10 +582,11 @@ const Contacto: React.FC = () => {
               </svg>
             </div>
             <div className="ct-card-label">Correo electrónico</div>
+            {/* TODO: confirmar el correo real — este es un placeholder */}
             <div className="ct-card-value" style={{ fontSize: "16px", wordBreak: "break-all" }}>
-              marcaestilo593@gmail.com
+              hola@vaneseshop.com
             </div>
-            <p className="ct-card-sub">Para consultas formales, cambios y garantías.</p>
+            <p className="ct-card-sub">Para consultas formales, pedidos personalizados y garantías.</p>
             <button className="ct-copy-btn" onClick={copyEmail}>
               {copied ? (
                 <>
@@ -625,29 +618,39 @@ const Contacto: React.FC = () => {
 
             <div style={{ marginTop: 4 }}>
               <a
-                href="https://www.instagram.com/marcaestilo593/"
+                href="https://www.instagram.com/vaneseshop/"
                 target="_blank"
                 rel="noreferrer"
                 className="ct-social-link"
               >
                 <span className="ct-social-platform">Instagram</span>
-                <span className="ct-social-handle">@marcaestilo593</span>
+                <span className="ct-social-handle">@vaneseshop</span>
                 <span className="ct-social-arrow">→</span>
               </a>
               <a
-                href="https://www.tiktok.com/@marcaestilomen"
+                href="https://www.facebook.com/vaneseshop/"
+                target="_blank"
+                rel="noreferrer"
+                className="ct-social-link"
+              >
+                <span className="ct-social-platform">Facebook</span>
+                <span className="ct-social-handle">vaneseshop</span>
+                <span className="ct-social-arrow">→</span>
+              </a>
+              <a
+                href="https://www.tiktok.com/@vaneseshop"
                 target="_blank"
                 rel="noreferrer"
                 className="ct-social-link"
               >
                 <span className="ct-social-platform">TikTok</span>
-                <span className="ct-social-handle">@marcaestilomen</span>
+                <span className="ct-social-handle">@vaneseshop</span>
                 <span className="ct-social-arrow">→</span>
               </a>
             </div>
 
             <p className="ct-card-sub" style={{ marginTop: 8 }}>
-              Síguenos para ver los nuevos lanzamientos y promociones.
+              Síguenos para ver las nuevas piezas y lanzamientos.
             </p>
           </div>
 
@@ -664,10 +667,10 @@ const Contacto: React.FC = () => {
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               </svg>
-              Tienda 100% online
+              Envíos a todo Ecuador
             </div>
             <p className="ct-card-sub" style={{ marginTop: 8 }}>
-              No contamos con tienda física ni retiro en bodega. Todos los pedidos se envían por courier a todo Ecuador.
+              Piezas hechas a mano bajo el Método TransformArte, con envío por courier a todo el país.
             </p>
           </div>
 
@@ -675,7 +678,7 @@ const Contacto: React.FC = () => {
 
         {/* ── FOOTER ── */}
         <div className="ct-footer">
-          <p>© {new Date().getFullYear()} MarcaEstilo. Todos los derechos reservados.</p>
+          <p>© {new Date().getFullYear()} vaneshop. Todos los derechos reservados.</p>
           <Link href="/">← Volver al inicio</Link>
         </div>
 
