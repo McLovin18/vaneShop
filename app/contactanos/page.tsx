@@ -550,26 +550,20 @@ const Contacto: React.FC = () => {
             </div>
             <div className="ct-card-label">Horario de atención</div>
 
-            {/* TODO: confirmar horario real de vaneseshop — se mantiene el de referencia por ahora */}
             <div style={{ marginTop: 4 }}>
               {[
-                { day: "Lunes – Viernes", time: "9:00 – 18:00" },
-                { day: "Sábados", time: "9:00 – 13:00" },
-                { day: "Domingos", time: null },
-                { day: "Feriados", time: null },
+                { day: "Lunes – Domingo", time: "24 horas" },
+                { day: "Pedidos online", time: "Siempre disponible" },
               ].map((row) => (
                 <div className="ct-horario-row" key={row.day}>
                   <span className="ct-horario-day">{row.day}</span>
-                  {row.time
-                    ? <span className="ct-horario-time">{row.time}</span>
-                    : <span className="ct-horario-closed">Cerrado</span>
-                  }
+                  <span className="ct-horario-time">{row.time}</span>
                 </div>
               ))}
             </div>
 
             <p className="ct-card-sub" style={{ marginTop: 6 }}>
-              Fuera de horario respondemos al siguiente día hábil.
+              Somos una tienda 100% online: puedes escribirnos o hacer tu pedido a cualquier hora, todos los días.
             </p>
           </div>
 
@@ -584,7 +578,7 @@ const Contacto: React.FC = () => {
             <div className="ct-card-label">Correo electrónico</div>
             {/* TODO: confirmar el correo real — este es un placeholder */}
             <div className="ct-card-value" style={{ fontSize: "16px", wordBreak: "break-all" }}>
-              hola@vaneseshop.com
+              vanes25@hotmail.es
             </div>
             <p className="ct-card-sub">Para consultas formales, pedidos personalizados y garantías.</p>
             <button className="ct-copy-btn" onClick={copyEmail}>
