@@ -255,7 +255,7 @@ export const Navbar = () => {
   // en el drawer móvil, vía <MobileCategoriesAccordion />.
   const links = [
     { href: "/", label: "Inicio" },
-    { href: "/productos", label: "Catálogo" },
+    { href: "/productos", label: "Tienda" },
     { href: "/nueva-coleccion", label: "Nueva Colección" },
     { href: "/blogs/9AHCeg1r5NEZU9L4GaNC", label: "Sobre la Artista" }, // TODO: confirmar slug real del post
     { href: `${basePath}?cat=${CATEGORIA_TALLERES_ID}`, label: "Talleres" },
