@@ -43,8 +43,11 @@ function MobileCategoriesAccordion({ basePath }: { basePath: string }) {
   const [openSub, setOpenSub] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    // Cargar categorías en segundo plano sin bloquear el renderizado
     const unsub = onSnapshot(collection(db, "categorias"), (snap) => {
       setCategorias(sortCategoriasByOrder(mapCategorySnapshot(snap.docs)));
+    }, (error) => {
+      console.error("Error loading categories:", error);
     });
     return () => unsub();
   }, []);
@@ -185,10 +188,17 @@ export const Navbar = () => {
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    // Solo cargar productos para búsqueda en desktop y no en WebViews
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024 && !isWebViewOrLowPerformance()) {
-      obtenerProductos().then((prods) => setAllProducts(prods));
-    }
+    // Cargar productos para búsqueda solo después de que el navbar se haya renderizado
+    // Usar setTimeout para no bloquear el renderizado inicial
+    const timer = setTimeout(() => {
+      if (typeof window !== 'undefined' && window.innerWidth >= 1024 && !isWebViewOrLowPerformance()) {
+        obtenerProductos().then((prods) => setAllProducts(prods)).catch(err => {
+          console.error("Error loading products for search:", err);
+        });
+      }
+    }, 500); // 500ms delay para priorizar renderizado del navbar
+    
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -243,7 +253,6 @@ export const Navbar = () => {
     setSearchLoading(false);
   }, [searchValue, allProducts]);
 
-  if (!mounted) return null;
 
   const isAdmin = user?.role === "admin";
   const basePath = isAdmin
