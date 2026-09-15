@@ -94,7 +94,9 @@ export default function ProductosPage() {
     async function fetchProductos() {
       setLoading(true);
       try {
-        const all = await obtenerProductos();
+        const response = await fetch('/api/productos');
+        if (!response.ok) throw new Error('Error fetching productos');
+        const all = await response.json();
         let prods = all;
 
         if (categoria && categorias.length > 0) {

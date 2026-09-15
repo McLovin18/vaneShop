@@ -22,8 +22,7 @@ const Contacto: React.FC = () => {
   }, []);
 
   const copyEmail = () => {
-    // TODO: confirmar el correo real de vaneseshop — este es un placeholder
-    navigator.clipboard.writeText("hola@vaneseshop.com");
+    navigator.clipboard.writeText("vanes25@hotmail.es");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -568,7 +567,11 @@ const Contacto: React.FC = () => {
           </div>
 
           {/* CORREO */}
-          <div className="ct-card" style={{ animationDelay: "0.19s" }}>
+          <a 
+            href="mailto:vanes25@hotmail.es"
+            className="ct-card" 
+            style={{ animationDelay: "0.19s" }}
+          >
             <div className="ct-icon-wrap">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="4" width="20" height="16" rx="2"/>
@@ -576,12 +579,17 @@ const Contacto: React.FC = () => {
               </svg>
             </div>
             <div className="ct-card-label">Correo electrónico</div>
-            {/* TODO: confirmar el correo real — este es un placeholder */}
             <div className="ct-card-value" style={{ fontSize: "16px", wordBreak: "break-all" }}>
               vanes25@hotmail.es
             </div>
             <p className="ct-card-sub">Para consultas formales, pedidos personalizados y garantías.</p>
-            <button className="ct-copy-btn" onClick={copyEmail}>
+            <button 
+              className="ct-copy-btn" 
+              onClick={(e) => {
+                e.preventDefault();
+                copyEmail();
+              }}
+            >
               {copied ? (
                 <>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -598,7 +606,7 @@ const Contacto: React.FC = () => {
                 </>
               )}
             </button>
-          </div>
+          </a>
 
           {/* REDES SOCIALES */}
           <div className="ct-card" style={{ animationDelay: "0.26s" }}>

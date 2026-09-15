@@ -149,7 +149,9 @@ export default function ProductsByCategoryPage() {
     async function fetchProductos() {
       setLoading(true);
       try {
-        const all = await obtenerProductos();
+        const response = await fetch('/api/productos');
+        if (!response.ok) throw new Error('Error fetching productos');
+        const all = await response.json();
         let prods = all;
 
         if (categoriaId && categorias.length > 0) {
