@@ -182,7 +182,7 @@ export default function CartPage() {
       .join("\n");
 
     const headerMsg = "Hola, Me gustaría realizar una compra:";
-    const footerMsg = "Quiero confirmar disponibilidad y conocer más detalles. Gracias!";
+    const footerMsg = "Quiero confirmar disponibilidad y en si hay stock ayudeme con el link de pago. Gracias!";
 
     const deliveryText = `Ciudad de entrega: ${ciudadEntrega?.nombre}\nZona de entrega: ${zonaEntrega?.nombre}\nDirección: ${direccionEnvio}\nEnvío: ${envioGratis ? "GRATIS" : `$${costoEnvio.toFixed(2)}`}`;
     const totalWhatsApp = total;
@@ -337,9 +337,16 @@ export default function CartPage() {
       setNombreEnvio("");
       setDireccionEnvio("");
 
-      // Mostrar mensaje de éxito
+      // Enviar al WhatsApp con mensaje de orden enviada
+      const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || "593984880468";
+      const whatsappMessage = encodeURIComponent(`Hola, acabo de realizar la transacción con la orden #${result.orderId}. Le agradecería que la revisara.`);
+      
+      // Mostrar mensaje de éxito y redirigir
       setError("");
-      alert(`Orden ${result.orderId} creada exitosamente. Te hemos enviado un correo de confirmación.`);
+      alert(`Orden ${result.orderId} creada exitosamente. Te hemos enviado un correo de confirmación. Serás redirigido a WhatsApp.`);
+      
+      // Redirigir a WhatsApp
+      window.location.href = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
     } catch (error: any) {
       setError(error.message || "Error al procesar la transferencia");
