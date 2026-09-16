@@ -6,6 +6,8 @@ import { Check, AlertCircle, Loader } from "lucide-react";
 
 // Forzar renderizado dinámico para evitar error de prerendering
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 
 type VerificationState = "loading" | "success" | "expired" | "error";
 
