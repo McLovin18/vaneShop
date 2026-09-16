@@ -39,6 +39,7 @@ export default function ProductDetailPage({ params }) {
   const [personalizacionValues, setPersonalizacionValues] = useState<Record<string, string>>({});
   const [variacionPersonalizada, setVariacionPersonalizada] = useState("");
   const [shouldScrollToImage, setShouldScrollToImage] = useState(false);
+  const [userManuallyChangedImage, setUserManuallyChangedImage] = useState(false);
   const imageRef = React.useRef<HTMLDivElement>(null);
 
   const {
@@ -108,7 +109,8 @@ export default function ProductDetailPage({ params }) {
     // Verificar si todas las variaciones están seleccionadas
     const allSelected = variationAttributeIds.every((attrId: string) => selectedVariations[attrId]);
     
-    if (typeof selectedVariant?.imagenIndex === "number" && producto.imagenes[selectedVariant.imagenIndex]) {
+    // Solo cambiar la imagen automáticamente si el usuario no la cambió manualmente
+    if (typeof selectedVariant?.imagenIndex === "number" && producto.imagenes[selectedVariant.imagenIndex] && !userManuallyChangedImage) {
       const oldImgIdx = imgIdx;
       setImgIdx(selectedVariant.imagenIndex);
       
@@ -117,7 +119,7 @@ export default function ProductDetailPage({ params }) {
         setShouldScrollToImage(true);
       }
     }
-  }, [producto, selectedVariations, imgIdx]);
+  }, [producto, selectedVariations, imgIdx, userManuallyChangedImage]);
 
   // Scroll suave hacia la imagen cuando se completa la selección
   useEffect(() => {
@@ -148,26 +150,16 @@ export default function ProductDetailPage({ params }) {
       if (!id) { setProducto(null); setRelacionados([]); setLoading(false); return; }
       
       try {
-        let prod;
-        
-        // Intentar API del servidor primero (para webviews como Instagram)
-        try {
-          console.log("[PRODUCT-DETAIL] Trying server API");
-          const response = await fetch(`/api/producto/${id}`);
-          if (response.ok) {
-            prod = await response.json();
-            console.log("[PRODUCT-DETAIL] Server API success");
-          } else {
-            console.log("[PRODUCT-DETAIL] Server API failed, trying fallback");
-            throw new Error('Server API failed');
-          }
-        } catch (serverError) {
-          console.log("[PRODUCT-DETAIL] Server API error, using client-side fallback:", serverError);
-          // Fallback al método original si la API falla
-          prod = await obtenerProductoPorId(id);
+        // Usar siempre API del servidor (Firebase Admin SDK) para webviews como Instagram
+        console.log("[PRODUCT-DETAIL] Fetching from server API");
+        const response = await fetch(`/api/producto/${id}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("[PRODUCT-DETAIL] Server API error:", errorText);
+          throw new Error('Error fetching producto from server');
         }
-        
-        console.log("[PRODUCT-DETAIL] Product loaded:", prod);
+        const prod = await response.json();
+        console.log("[PRODUCT-DETAIL] Product loaded from server:", prod);
         setProducto(prod);
         
         // Cargar reviews y relacionados en paralelo después de tener el producto
@@ -179,22 +171,22 @@ export default function ProductDetailPage({ params }) {
               let rel = [];
               console.log("[RELACIONADOS] subsubcategoria:", prod.subsubcategoria, "subcategoria:", prod.subcategoria, "categoria:", prod.categoria);
               
-              // Intentar subsubcategoria primero
+              // Usar API del servidor para productos relacionados
+              const queryParams = new URLSearchParams();
               if (prod.subsubcategoria) {
-                rel = await obtenerProductosPorSubsubcategoria(prod.subsubcategoria, prod.id, 10);
-                console.log("[RELACIONADOS] encontrados por subsubcategoria:", rel);
+                queryParams.append("subsubcategoria", prod.subsubcategoria);
+              } else if (prod.subcategoria) {
+                queryParams.append("subcategoria", prod.subcategoria);
+              } else if (prod.categoria) {
+                queryParams.append("categoria", prod.categoria);
               }
+              queryParams.append("excludeId", prod.id);
+              queryParams.append("limit", "10");
               
-              // Fallback a subcategoria si no hay resultados
-              if ((!rel || rel.length === 0) && prod.subcategoria) {
-                rel = await obtenerProductosPorSubcategoria(prod.subcategoria, prod.id, 10);
-                console.log("[RELACIONADOS] encontrados por subcategoria:", rel);
-              }
-              
-              // Fallback a categoria si aún no hay resultados
-              if ((!rel || rel.length === 0) && prod.categoria) {
-                rel = await obtenerProductosPorCategoria(prod.categoria, prod.id, 10);
-                console.log("[RELACIONADOS] encontrados por categoria:", rel);
+              const relResponse = await fetch(`/api/productos/relacionados?${queryParams}`);
+              if (relResponse.ok) {
+                rel = await relResponse.json();
+                console.log("[RELACIONADOS] encontrados:", rel);
               }
               
               setRelacionados(rel);
@@ -485,7 +477,7 @@ export default function ProductDetailPage({ params }) {
               )}
               {producto.imagenes.length > 1 && imgIdx > 0 && (
                 <button
-                  onClick={() => setImgIdx(imgIdx - 1)}
+                  onClick={() => { setImgIdx(imgIdx - 1); setUserManuallyChangedImage(true); }}
                   className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[var(--card)] border border-[var(--border)] shadow flex items-center justify-center hover:scale-105 transition-transform"
                 >
                   <span className="material-icons-round text-slate-600 dark:text-white/70 text-lg">chevron_left</span>
@@ -493,7 +485,7 @@ export default function ProductDetailPage({ params }) {
               )}
               {producto.imagenes.length > 1 && imgIdx < producto.imagenes.length - 1 && (
                 <button
-                  onClick={() => setImgIdx(imgIdx + 1)}
+                  onClick={() => { setImgIdx(imgIdx + 1); setUserManuallyChangedImage(true); }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[var(--card)] border border-[var(--border)] shadow flex items-center justify-center hover:scale-105 transition-transform"
                 >
                   <span className="material-icons-round text-slate-600 dark:text-white/70 text-lg">chevron_right</span>
@@ -507,7 +499,7 @@ export default function ProductDetailPage({ params }) {
                 {producto.imagenes.map((img, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setImgIdx(idx)}
+                    onClick={() => { setImgIdx(idx); setUserManuallyChangedImage(true); }}
                     className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all bg-[var(--bgSecondary)] ${
                       imgIdx === idx
                         ? "border-slate-400 dark:border-white/30 scale-105"
