@@ -561,27 +561,61 @@ export default function CartPage() {
                         <span className="material-icons-round text-lg">location_on</span>
                         ¿Dónde quieres recibir tu pedido?
                       </p>
-                      <select 
-                        value={ciudadEntregaId} 
-                        onChange={(event) => { setCiudadEntregaId(event.target.value); setZonaEntregaId(""); }} 
-                        className="mb-3 w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer"
-                        style={{ minHeight: "44px", fontSize: "16px", WebkitAppearance: "menulist" }}
-                      >
-                        <option value="">Selecciona una ciudad</option>
-                        {ciudadesEntrega.map((city) => <option key={city.id} value={city.id}>{city.nombre}</option>)}
-                      </select>
-                      <select 
-                        value={zonaEntregaId} 
-                        onChange={(event) => setZonaEntregaId(event.target.value)} 
-                        disabled={!ciudadEntrega} 
-                        className="w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-                        style={{ minHeight: "44px", fontSize: "16px", WebkitAppearance: "menulist" }}
-                      >
-                        <option value="">Selecciona una zona</option>
-                        {ciudadEntrega?.zonas?.map((zone) => {
-                          return <option key={zone.id} value={zone.id}>{zone.nombre}</option>;
-                        })}
-                      </select>
+                      
+                      {/* Selección de ciudad como botones */}
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-[var(--text)] mb-2">Ciudad</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => { setCiudadEntregaId(""); setZonaEntregaId(""); }}
+                            className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${!ciudadEntregaId ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
+                            style={{ minHeight: "44px", fontSize: "16px" }}
+                          >
+                            Seleccionar
+                          </button>
+                          {ciudadesEntrega.map((city) => (
+                            <button
+                              key={city.id}
+                              type="button"
+                              onClick={() => { setCiudadEntregaId(city.id); setZonaEntregaId(""); }}
+                              className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${ciudadEntregaId === city.id ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
+                              style={{ minHeight: "44px", fontSize: "16px" }}
+                            >
+                              {city.nombre}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Selección de zona como botones */}
+                      {ciudadEntrega && (
+                        <div className="mb-3">
+                          <label className="block text-sm font-medium text-[var(--text)] mb-2">Zona</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setZonaEntregaId("")}
+                              className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${!zonaEntregaId ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
+                              style={{ minHeight: "44px", fontSize: "16px" }}
+                            >
+                              Seleccionar
+                            </button>
+                            {ciudadEntrega?.zonas?.map((zone) => (
+                              <button
+                                key={zone.id}
+                                type="button"
+                                onClick={() => setZonaEntregaId(zone.id)}
+                                className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${zonaEntregaId === zone.id ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
+                                style={{ minHeight: "44px", fontSize: "16px" }}
+                              >
+                                {zone.nombre}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {ciudadEntrega && (ciudadEntrega.zonas || []).length === 0 && <p className="mt-2 text-xs text-[var(--textSecondary)]">Esta ciudad todavía no tiene zonas configuradas.</p>}
                       {ciudadEntrega && zonaEntrega && <p className="mt-3 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/10 px-3 py-2 rounded-lg border border-[var(--primary)]/20">{envioGratis && cobroFijoZona !== undefined ? `Envío con tarifa especial: $${cobroFijoZona.toFixed(2)} (por alcanzar el mínimo)` : envioGratis ? "Tu envío será gratis por alcanzar el mínimo." : `Costo de entrega: $${costoEnvio.toFixed(2)} (Mínimo para envío gratis: $${montoMinimoGratisCiudad.toFixed(2)})`}</p>}
                     </div>
