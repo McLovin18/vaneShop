@@ -9,7 +9,8 @@ import { Inter } from "next/font/google";
 
 // ISR Global: Revalidar sitio cada 30 minutos
 // Optimiza regeneración de página principal y otros contenidos estáticos
-export const revalidate = 1800;
+// Comentado temporalmente para evitar errores de prerendering en páginas con hooks de cliente
+// export const revalidate = 1800;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://vaneseshop.com"; // ⚠️ Reemplazar con dominio de producción
 const SITE_NAME = "vaneseshop";

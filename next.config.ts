@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Deshabilitar pre-rendering estático por defecto para evitar errores con hooks de cliente
+  output: undefined, // No usar 'export' para permitir renderizado dinámico
+  experimental: {
+    // Deshabilitar pre-rendering estático para rutas específicas
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
   images: {
     unoptimized: true, // Desactivar optimización de imágenes remotas para evitar timeouts
     remotePatterns: [
