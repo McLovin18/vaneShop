@@ -469,16 +469,18 @@ export default function CartPage() {
                           <div className="flex items-center gap-1 bg-gradient-to-r from-[var(--primary)] to-[var(--primaryHover)] rounded-lg p-0.5 shadow-sm">
                             <button
                               onClick={() => handleCantidad(itemKey, (p.cantidad || 1) - 1)}
-                              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/20 transition-colors text-white font-bold text-base"
+                              className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-white/20 transition-colors text-white font-bold text-base"
+                              style={{ minHeight: "44px" }}
                             >
                               -
                             </button>
-                            <span className="w-7 text-center text-sm font-bold text-white">
+                            <span className="w-9 text-center text-sm font-bold text-white">
                               {p.cantidad || 1}
                             </span>
                             <button
                               onClick={() => handleCantidad(itemKey, (p.cantidad || 1) + 1)}
-                              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white/20 transition-colors text-white font-bold text-base"
+                              className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-white/20 transition-colors text-white font-bold text-base"
+                              style={{ minHeight: "44px" }}
                             >
                               +
                             </button>
@@ -497,6 +499,7 @@ export default function CartPage() {
                           onClick={() => removeCarrito(itemKey)}
                           className="text-[var(--textSecondary)] hover:text-red-500 transition-colors"
                           title="Eliminar"
+                          style={{ minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}
                         >
                           <span className="material-icons-round text-xl">delete_outline</span>
                         </button>
@@ -549,6 +552,7 @@ export default function CartPage() {
                         onChange={(e) => setNombreEnvio(e.target.value)}
                         className="w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
                         placeholder="Tu nombre para el envío"
+                        style={{ minHeight: "44px", fontSize: "16px" }}
                       />
                       <p className="mt-2 text-xs text-[var(--textSecondary)]">Ingresa el nombre de quien recibirá el pedido</p>
                     </div>
@@ -557,11 +561,22 @@ export default function CartPage() {
                         <span className="material-icons-round text-lg">location_on</span>
                         ¿Dónde quieres recibir tu pedido?
                       </p>
-                      <select value={ciudadEntregaId} onChange={(event) => { setCiudadEntregaId(event.target.value); setZonaEntregaId(""); }} className="mb-3 w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all">
+                      <select 
+                        value={ciudadEntregaId} 
+                        onChange={(event) => { setCiudadEntregaId(event.target.value); setZonaEntregaId(""); }} 
+                        className="mb-3 w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all cursor-pointer"
+                        style={{ minHeight: "44px", fontSize: "16px", WebkitAppearance: "menulist" }}
+                      >
                         <option value="">Selecciona una ciudad</option>
                         {ciudadesEntrega.map((city) => <option key={city.id} value={city.id}>{city.nombre}</option>)}
                       </select>
-                      <select value={zonaEntregaId} onChange={(event) => setZonaEntregaId(event.target.value)} disabled={!ciudadEntrega} className="w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all disabled:cursor-not-allowed disabled:opacity-50">
+                      <select 
+                        value={zonaEntregaId} 
+                        onChange={(event) => setZonaEntregaId(event.target.value)} 
+                        disabled={!ciudadEntrega} 
+                        className="w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                        style={{ minHeight: "44px", fontSize: "16px", WebkitAppearance: "menulist" }}
+                      >
                         <option value="">Selecciona una zona</option>
                         {ciudadEntrega?.zonas?.map((zone) => {
                           return <option key={zone.id} value={zone.id}>{zone.nombre}</option>;
@@ -581,14 +596,16 @@ export default function CartPage() {
                         onChange={(e) => setDireccionEnvio(e.target.value)}
                         className="w-full rounded-lg border-2 border-[var(--primary)]/30 bg-white dark:bg-[var(--card)] px-3 py-2.5 text-sm font-medium text-[var(--text)] focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 transition-all"
                         placeholder="Escribe tu dirección específica de entrega"
+                        style={{ minHeight: "44px", fontSize: "16px" }}
                       />
                       <p className="mt-2 text-xs text-[var(--textSecondary)]">Ingresa la dirección exacta donde deseas recibir tu pedido</p>
                     </div>
                     <button
                       onClick={handleGenerarOrden}
                       disabled={!ciudadEntrega || !zonaEntrega}
-                      className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-[var(--primary)] to-[var(--primaryHover)] hover:from-[var(--primaryHover)] hover:to-[var(--primary)] text-white font-extrabold text-sm rounded-xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-md transform hover:scale-[1.02] active:scale-[0.98]"
+                      className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-[var(--primary)] to-[var(--primaryHover)] hover:from-[var(--primaryHover)] hover:to-[var(--primary)] text-white font-extrabold text-sm rounded-xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-md transform hover:scale-[1.02] active:scale-[0.98] touch-action-manipulation"
                       title="Enviar pedido por WhatsApp"
+                      style={{ minHeight: "44px", fontSize: "16px" }}
                     >
                       <span className="material-icons-round text-lg">chat</span>
                       Pagar con tarjeta de credito/debito
@@ -612,8 +629,9 @@ export default function CartPage() {
                     <button
                       onClick={() => setShowTransferModal(true)}
                       disabled={!ciudadEntrega || !zonaEntrega}
-                      className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-extrabold text-sm rounded-xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-md transform hover:scale-[1.02] active:scale-[0.98]"
+                      className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-extrabold text-sm rounded-xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-md transform hover:scale-[1.02] active:scale-[0.98] touch-action-manipulation"
                       title="Pagar por transferencia bancaria"
+                      style={{ minHeight: "44px", fontSize: "16px" }}
                     >
                       <span className="material-icons-round text-lg">account_balance</span>
                       Pagar por Transferencia
@@ -650,6 +668,7 @@ export default function CartPage() {
                   onChange={(e) => setTransferencia({...transferencia, nombre: e.target.value})}
                   className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
                   placeholder="Nombre o razón social"
+                  style={{ minHeight: "44px", fontSize: "16px" }}
                 />
               </div>
               
@@ -661,6 +680,7 @@ export default function CartPage() {
                   onChange={(e) => setTransferencia({...transferencia, cedulaRuc: e.target.value})}
                   className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
                   placeholder="Tu cédula o RUC"
+                  style={{ minHeight: "44px", fontSize: "16px" }}
                 />
               </div>
               
@@ -672,6 +692,7 @@ export default function CartPage() {
                   onChange={(e) => setTransferencia({...transferencia, telefono: e.target.value})}
                   className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
                   placeholder="0991234567"
+                  style={{ minHeight: "44px", fontSize: "16px" }}
                 />
               </div>
               
@@ -683,6 +704,7 @@ export default function CartPage() {
                   onChange={(e) => setTransferencia({...transferencia, correo: e.target.value})}
                   className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
                   placeholder="tu@email.com"
+                  style={{ minHeight: "44px", fontSize: "16px" }}
                 />
               </div>
               
@@ -691,7 +713,8 @@ export default function CartPage() {
                 <select
                   value={transferencia.cuentaBancariaId}
                   onChange={(e) => setTransferencia({...transferencia, cuentaBancariaId: e.target.value})}
-                  className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
+                  className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none cursor-pointer"
+                  style={{ minHeight: "44px", fontSize: "16px", WebkitAppearance: "menulist" }}
                 >
                   <option value="">Selecciona una cuenta</option>
                   {cuentasBancarias.map(cuenta => (
@@ -722,7 +745,8 @@ export default function CartPage() {
                   type="file"
                   accept="image/*"
                   onChange={(e) => setTransferencia({...transferencia, evidencia: e.target.files?.[0] || null})}
-                  className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none"
+                  className="w-full rounded-lg border-2 border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] focus:border-[var(--primary)] focus:outline-none cursor-pointer"
+                  style={{ minHeight: "44px", fontSize: "16px" }}
                 />
                 <p className="text-xs text-[var(--textSecondary)] mt-1">Sube una captura del comprobante de transferencia</p>
               </div>
@@ -731,6 +755,7 @@ export default function CartPage() {
                 onClick={handleTransferirPago}
                 disabled={!transferencia.nombre || !transferencia.telefono || !transferencia.correo || !transferencia.cuentaBancariaId || !transferencia.evidencia || isSubmitting}
                 className="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed touch-action-manipulation"
+                style={{ minHeight: "44px", fontSize: "16px" }}
               >
                 {isSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
