@@ -10,6 +10,7 @@ import { obtenerProductos } from "./lib/productos-db";
 import type { LandingSection } from "./lib/landing-types";
 import { useUser } from "./context/UserContext";
 import ContactSection from "./landing/sections/ContactSection";
+import { Loading3DIcon } from "./components/Loading3DIcon";
 
 // Componente para cargar productos de forma diferida
 function LazyProducts({ onProductsLoaded }: { onProductsLoaded: (products: any[]) => void }) {
@@ -190,29 +191,9 @@ const lastHeroIndex = useMemo(() => {
       </Suspense>
       <main className="min-h-screen w-full" style={{ background: "var(--bg)", color: "var(--text)" }}>
         {landingLoading ? (
-        <div
-            className="w-full relative overflow-hidden"
-            style={{ aspectRatio: "2400 / 1000", minHeight: "300px", background: "var(--bgSecondary)" }}
-        >
-            <div className="absolute inset-0" style={{ background: "var(--bg)" }} />
-            {/* Animación simplificada para iOS Safari - usando opacity en lugar de position */}
-            <div
-            className="absolute inset-0"
-            style={{
-                background: "linear-gradient(90deg, transparent 0%, rgba(252, 211, 77, 0.1) 50%, transparent 100%)",
-                animation: "shimmer 2.5s infinite",
-                backgroundSize: "200% 100%",
-                willChange: "opacity",
-            }}
-            />
-            <style>{`
-            @keyframes shimmer {
-                0% { opacity: 0.3; background-position: -200% 0; }
-                50% { opacity: 0.6; }
-                100% { opacity: 0.3; background-position: 200% 0; }
-            }
-            `}</style>
-        </div>
+          <div className="flex items-center justify-center" style={{ minHeight: "calc(100vh - 80px)" }}>
+            <Loading3DIcon />
+          </div>
         ) : (
           <div className="flex flex-col">
             {/* Renderizar secciones sin productos inmediatamente */}

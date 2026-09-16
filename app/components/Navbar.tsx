@@ -170,7 +170,6 @@ function MobileCategoriesAccordion({ basePath }: { basePath: string }) {
 // Navbar principal
 // ─────────────────────────────────────────────
 export const Navbar = () => {
-  const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -184,8 +183,6 @@ export const Navbar = () => {
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     // Cargar productos para búsqueda solo después de que el navbar se haya renderizado

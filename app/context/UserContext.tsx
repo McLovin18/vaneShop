@@ -228,15 +228,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const isAdmin = user?.role === "admin";
   const loading = !cartReady || userLoading;
 
-
-  if (loading) {
-    return (
-      <div style={{width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-        <Loading3DIcon />
-      </div>
-    );
-  }
-
+  // NO bloquear el renderizado - permitir que el navbar se muestre inmediatamente
+  // El loading solo afecta componentes que dependen del estado del usuario
   return (
     <UserContext.Provider value={{
       isLogged,

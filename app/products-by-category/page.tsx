@@ -195,7 +195,7 @@ export default function ProductsByCategoryPage() {
       }
     }
     fetchProductos();
-  }, [categoriaId, subcategoriaId, subsubcategoriaId, categorias]);
+  }, [categoriaId, subcategoriaId, subsubcategoriaId]); // Eliminado 'categorias' de las dependencias
 
   // 2.5. Cargar categorías
   useEffect(() => {

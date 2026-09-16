@@ -144,46 +144,71 @@ export default function ProductDetailPage({ params }) {
     async function fetchProducto() {
       setLoading(true);
       const id = params?.id || searchParams.get("id");
+      console.log("[PRODUCT-DETAIL] Fetching product with id:", id);
       if (!id) { setProducto(null); setRelacionados([]); setLoading(false); return; }
       
-      // Cargar producto principal
-      const prod = await obtenerProductoPorId(id);
-      setProducto(prod);
-      
-      // Cargar reviews y relacionados en paralelo después de tener el producto
-      if (prod) {
-        // Ejecutar reviews y relacionados en paralelo
-        Promise.all([
-          fetchReviews(id),
-          (async () => {
-            let rel = [];
-            console.log("[RELACIONADOS] subsubcategoria:", prod.subsubcategoria, "subcategoria:", prod.subcategoria, "categoria:", prod.categoria);
-            
-            // Intentar subsubcategoria primero
-            if (prod.subsubcategoria) {
-              rel = await obtenerProductosPorSubsubcategoria(prod.subsubcategoria, prod.id, 10);
-              console.log("[RELACIONADOS] encontrados por subsubcategoria:", rel);
-            }
-            
-            // Fallback a subcategoria si no hay resultados
-            if ((!rel || rel.length === 0) && prod.subcategoria) {
-              rel = await obtenerProductosPorSubcategoria(prod.subcategoria, prod.id, 10);
-              console.log("[RELACIONADOS] encontrados por subcategoria:", rel);
-            }
-            
-            // Fallback a categoria si aún no hay resultados
-            if ((!rel || rel.length === 0) && prod.categoria) {
-              rel = await obtenerProductosPorCategoria(prod.categoria, prod.id, 10);
-              console.log("[RELACIONADOS] encontrados por categoria:", rel);
-            }
-            
-            setRelacionados(rel);
-          })()
-        ]).catch(err => {
-          console.error("Error cargando datos adicionales:", err);
+      try {
+        let prod;
+        
+        // Intentar API del servidor primero (para webviews como Instagram)
+        try {
+          console.log("[PRODUCT-DETAIL] Trying server API");
+          const response = await fetch(`/api/producto/${id}`);
+          if (response.ok) {
+            prod = await response.json();
+            console.log("[PRODUCT-DETAIL] Server API success");
+          } else {
+            console.log("[PRODUCT-DETAIL] Server API failed, trying fallback");
+            throw new Error('Server API failed');
+          }
+        } catch (serverError) {
+          console.log("[PRODUCT-DETAIL] Server API error, using client-side fallback:", serverError);
+          // Fallback al método original si la API falla
+          prod = await obtenerProductoPorId(id);
+        }
+        
+        console.log("[PRODUCT-DETAIL] Product loaded:", prod);
+        setProducto(prod);
+        
+        // Cargar reviews y relacionados en paralelo después de tener el producto
+        if (prod) {
+          // Ejecutar reviews y relacionados en paralelo
+          Promise.all([
+            fetchReviews(id),
+            (async () => {
+              let rel = [];
+              console.log("[RELACIONADOS] subsubcategoria:", prod.subsubcategoria, "subcategoria:", prod.subcategoria, "categoria:", prod.categoria);
+              
+              // Intentar subsubcategoria primero
+              if (prod.subsubcategoria) {
+                rel = await obtenerProductosPorSubsubcategoria(prod.subsubcategoria, prod.id, 10);
+                console.log("[RELACIONADOS] encontrados por subsubcategoria:", rel);
+              }
+              
+              // Fallback a subcategoria si no hay resultados
+              if ((!rel || rel.length === 0) && prod.subcategoria) {
+                rel = await obtenerProductosPorSubcategoria(prod.subcategoria, prod.id, 10);
+                console.log("[RELACIONADOS] encontrados por subcategoria:", rel);
+              }
+              
+              // Fallback a categoria si aún no hay resultados
+              if ((!rel || rel.length === 0) && prod.categoria) {
+                rel = await obtenerProductosPorCategoria(prod.categoria, prod.id, 10);
+                console.log("[RELACIONADOS] encontrados por categoria:", rel);
+              }
+              
+              setRelacionados(rel);
+            })()
+          ]).catch(err => {
+            console.error("Error cargando datos adicionales:", err);
+            setRelacionados([]);
+          });
+        } else {
           setRelacionados([]);
-        });
-      } else {
+        }
+      } catch (error) {
+        console.error("Error cargando producto:", error);
+        setProducto(null);
         setRelacionados([]);
       }
       

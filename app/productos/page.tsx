@@ -142,7 +142,7 @@ export default function ProductosPage() {
     }
 
     fetchProductos();
-  }, [categoria, subcategoria, subsubcategoria, categorias]);
+  }, [categoria, subcategoria, subsubcategoria]); // Eliminado 'categorias' de las dependencias
 
   useEffect(() => {
     const loggedIn = Boolean(localStorage.getItem("token"));
