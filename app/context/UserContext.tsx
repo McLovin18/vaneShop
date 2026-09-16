@@ -78,8 +78,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }, 0);
   }, []);
 
+  // Detectar si es Instagram iOS para deshabilitar Firebase Auth
+  const isInstagramiOS = typeof navigator !== 'undefined' && 
+    /Instagram/.test(navigator.userAgent) && 
+    /iPhone|iPad|iPod/.test(navigator.userAgent);
+  
   // Escuchar cambios en el token (incluye inicio de sesión y refresh de claims)
   useEffect(() => {
+    // Si es Instagram iOS, no usar Firebase Auth (bloquea el webview)
+    if (isInstagramiOS) {
+      console.log("[UserContext] Instagram iOS detected - skipping Firebase Auth");
+      setUserLoading(false);
+      return;
+    }
+    
     const unsubscribe = onIdTokenChanged(auth, async (realUser) => {
       if (!realUser) {
         setUser(null);

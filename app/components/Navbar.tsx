@@ -43,6 +43,17 @@ function MobileCategoriesAccordion({ basePath }: { basePath: string }) {
   const [openSub, setOpenSub] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    // Detectar si es Instagram iOS para deshabilitar Firebase Firestore
+    const isInstagramiOS = typeof navigator !== 'undefined' && 
+      /Instagram/.test(navigator.userAgent) && 
+      /iPhone|iPad|iPod/.test(navigator.userAgent);
+    
+    // Si es Instagram iOS, no usar Firebase Firestore (bloquea el webview)
+    if (isInstagramiOS) {
+      console.log("[Navbar] Instagram iOS detected - skipping Firebase Firestore");
+      return;
+    }
+    
     // Cargar categorías en segundo plano sin bloquear el renderizado
     const unsub = onSnapshot(collection(db, "categorias"), (snap) => {
       setCategorias(sortCategoriasByOrder(mapCategorySnapshot(snap.docs)));
@@ -185,13 +196,27 @@ export const Navbar = () => {
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    // Detectar si es Instagram iOS
+    const isInstagramiOS = typeof navigator !== 'undefined' && 
+      /Instagram/.test(navigator.userAgent) && 
+      /iPhone|iPad|iPod/.test(navigator.userAgent);
+    
     // Cargar productos para búsqueda solo después de que el navbar se haya renderizado
     // Usar setTimeout para no bloquear el renderizado inicial
     const timer = setTimeout(() => {
       if (typeof window !== 'undefined' && window.innerWidth >= 1024 && !isWebViewOrLowPerformance()) {
-        obtenerProductos().then((prods) => setAllProducts(prods)).catch(err => {
-          console.error("Error loading products for search:", err);
-        });
+        // Usar API del servidor si es Instagram iOS, de lo contrario usar Firebase client-side
+        if (isInstagramiOS) {
+          console.log("[Navbar] Instagram iOS detected - using server API for search products");
+          fetch('/api/productos')
+            .then(res => res.json())
+            .then(prods => setAllProducts(prods))
+            .catch(err => console.error("Error loading products for search:", err));
+        } else {
+          obtenerProductos().then((prods) => setAllProducts(prods)).catch(err => {
+            console.error("Error loading products for search:", err);
+          });
+        }
       }
     }, 500); // 500ms delay para priorizar renderizado del navbar
     

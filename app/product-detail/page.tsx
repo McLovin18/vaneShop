@@ -150,9 +150,20 @@ export default function ProductDetailPage({ params }) {
       if (!id) { setProducto(null); setRelacionados([]); setLoading(false); return; }
       
       try {
+        // Detectar si es Instagram iOS para usar opciones específicas
+        const isInstagramiOS = /Instagram/.test(navigator.userAgent) && /iPhone|iPad|iPod/.test(navigator.userAgent);
+        console.log("[PRODUCT-DETAIL] isInstagramiOS:", isInstagramiOS);
+        
         // Usar siempre API del servidor (Firebase Admin SDK) para webviews como Instagram
         console.log("[PRODUCT-DETAIL] Fetching from server API");
-        const response = await fetch(`/api/producto/${id}`);
+        const response = await fetch(`/api/producto/${id}`, {
+          // Opciones específicas para Instagram iOS webview
+          headers: isInstagramiOS ? {
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache',
+          } : {},
+          cache: 'no-store',
+        });
         if (!response.ok) {
           const errorText = await response.text();
           console.error("[PRODUCT-DETAIL] Server API error:", errorText);
@@ -183,7 +194,13 @@ export default function ProductDetailPage({ params }) {
               queryParams.append("excludeId", prod.id);
               queryParams.append("limit", "10");
               
-              const relResponse = await fetch(`/api/productos/relacionados?${queryParams}`);
+              const relResponse = await fetch(`/api/productos/relacionados?${queryParams}`, {
+                headers: isInstagramiOS ? {
+                  'Accept': 'application/json',
+                  'Cache-Control': 'no-cache',
+                } : {},
+                cache: 'no-store',
+              });
               if (relResponse.ok) {
                 rel = await relResponse.json();
                 console.log("[RELACIONADOS] encontrados:", rel);
