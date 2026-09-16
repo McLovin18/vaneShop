@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { obtenerBodegas } from "../lib/bodegas-db";
 import { getSnapshotPricing } from "../lib/pricing";
 import { useUser } from "../context/UserContext";
@@ -48,6 +48,29 @@ function resolveAvailableStock(item: any) {
   return Number(item.variantStock ?? item.stock ?? 0);
 }
 
+// Ayudante: aplica un timeout a cualquier promesa.
+// Necesario porque en ciertos WebViews embebidos (Instagram, Facebook, TikTok en iOS)
+// Firestore puede quedarse "colgado" sin resolver ni lanzar error si IndexedDB
+// está bloqueado o restringido por el navegador anfitrión. Sin timeout, el
+// componente se queda esperando para siempre y el selector nunca se llena.
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Timeout: ${label} tardó más de ${ms}ms`));
+    }, ms);
+
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 // --- Pagina principal del carrito
 export default function CartPage() {
   const { carrito: carritoRaw, removeCarrito, addCarrito, user } = useUser();
@@ -62,6 +85,14 @@ export default function CartPage() {
   const [nombreEnvio, setNombreEnvio] = useState("");
   const [direccionEnvio, setDireccionEnvio] = useState("");
   const [cuentaSeleccionada, setCuentaSeleccionada] = useState<any>(null);
+
+  // Estado explícito de carga/error para el selector de entregas.
+  // Antes, si el fetch fallaba o se colgaba en silencio (típico en el
+  // WebView de Instagram/iOS), "ciudadesEntrega" quedaba en [] para
+  // siempre y el usuario no veía ni las opciones ni ningún mensaje.
+  const [cargandoCiudades, setCargandoCiudades] = useState(true);
+  const [errorCiudades, setErrorCiudades] = useState("");
+  const [reintentoCiudades, setReintentoCiudades] = useState(0);
 
   // Modal de transferencia
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -80,23 +111,42 @@ export default function CartPage() {
     return { basePrice, discount, hasDiscount, fakeOldPrice, finalPrice };
   };
 
+  const cargarCiudadesEntrega = useCallback(async () => {
+    setCargandoCiudades(true);
+    setErrorCiudades("");
+    try {
+      // 8s de margen: suficiente para redes móviles lentas, pero corto
+      // para no dejar al usuario mirando un selector vacío por mucho tiempo.
+      const cities = await withTimeout(obtenerCiudadesEntrega(), 8000, "obtenerCiudadesEntrega");
+      setCiudadesEntrega(cities);
+      if (!cities || cities.length === 0) {
+        setErrorCiudades("No hay ciudades de entrega configuradas por el momento.");
+      }
+    } catch (err) {
+      console.error("Error cargando ciudades de entrega:", err);
+      setErrorCiudades(
+        "No se pudo cargar la configuración de entregas. Si estás en el navegador integrado de Instagram/TikTok, prueba abrir la tienda en Safari o Chrome (botón de menú → 'Abrir en el navegador')."
+      );
+    } finally {
+      setCargandoCiudades(false);
+    }
+  }, []);
+
   useEffect(() => {
     async function loadAtributos() {
-      const data = await obtenerAtributos();
-      setAtributos(data);
+      try {
+        const data = await withTimeout(obtenerAtributos(), 8000, "obtenerAtributos");
+        setAtributos(data);
+      } catch (err) {
+        console.error("Error cargando atributos:", err);
+        // No bloqueamos el carrito por esto; solo se pierde el detalle de variación.
+      }
     }
 
     loadAtributos();
 
-    // Cargar ciudades de entrega
-    obtenerCiudadesEntrega()
-      .then((cities) => {
-        setCiudadesEntrega(cities);
-      })
-      .catch(() => setError("No se pudo cargar la configuración de entregas."));
-
     // Cargar cuentas bancarias activas (no afecta a ciudades si falla)
-    obtenerCuentasBancariasActivas()
+    withTimeout(obtenerCuentasBancariasActivas(), 8000, "obtenerCuentasBancariasActivas")
       .then((cuentas) => {
         setCuentasBancarias(cuentas);
       })
@@ -105,6 +155,11 @@ export default function CartPage() {
         // No mostrar error ya que las cuentas son opcionales para WhatsApp
       });
   }, []);
+
+  // Cargar ciudades de entrega (separado, con soporte de reintento manual)
+  useEffect(() => {
+    cargarCiudadesEntrega();
+  }, [cargarCiudadesEntrega, reintentoCiudades]);
 
   // Cargar cuenta seleccionada cuando cambia el ID
   useEffect(() => {
@@ -133,7 +188,7 @@ export default function CartPage() {
   const montoMinimoGratisCiudad = Number(ciudadEntrega?.montoMinimoGratis ?? 25);
   const envioGratis = subtotal >= montoMinimoGratisCiudad;
   const cobroFijoZona = zonaEntrega?.cobroFijo !== undefined ? Number(zonaEntrega.cobroFijo) : undefined;
-  
+
   let costoEnvio: number;
   if (envioGratis && cobroFijoZona !== undefined) {
     // Si pasa el mínimo y la zona tiene cobro fijo, se cobra el cobro fijo
@@ -248,7 +303,7 @@ export default function CartPage() {
     try {
       setError("");
       setIsSubmitting(true);
-      
+
       // Validaciones
       if (!transferencia.nombre || !transferencia.cedulaRuc || !transferencia.telefono || !transferencia.correo || !transferencia.cuentaBancariaId || !transferencia.evidencia) {
         setError("Por favor completa todos los campos");
@@ -340,11 +395,11 @@ export default function CartPage() {
       // Enviar al WhatsApp con mensaje de orden enviada
       const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || "593984880468";
       const whatsappMessage = encodeURIComponent(`Hola, acabo de realizar la transacción con la orden #${result.orderId}. Le agradecería que la revisara.`);
-      
+
       // Mostrar mensaje de éxito y redirigir
       setError("");
       alert(`Orden ${result.orderId} creada exitosamente. Te hemos enviado un correo de confirmación. Serás redirigido a WhatsApp.`);
-      
+
       // Redirigir a WhatsApp
       window.location.href = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
@@ -379,6 +434,119 @@ export default function CartPage() {
       </a>
     </div>
   );
+
+  // Bloque del selector de ciudad/zona con 3 estados explícitos:
+  // cargando -> error/vacío (con botón de reintentar) -> lista real de botones.
+  // Esto evita que, si el fetch se cuelga en un WebView restringido (Instagram/
+  // TikTok en iOS), el usuario se quede viendo un espacio en blanco sin
+  // saber que algo falló.
+  const renderSelectorCiudadZona = () => {
+    if (cargandoCiudades) {
+      return (
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-[var(--text)] mb-2">Ciudad</label>
+          <div className="grid grid-cols-2 gap-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="p-3 rounded-lg border-2 border-[var(--border)] bg-[var(--muted)] animate-pulse"
+                style={{ minHeight: "44px" }}
+              />
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-[var(--textSecondary)]">Cargando ciudades de entrega…</p>
+        </div>
+      );
+    }
+
+    if (errorCiudades || ciudadesEntrega.length === 0) {
+      return (
+        <div className="mb-3 rounded-lg border-2 border-amber-300 bg-amber-50 p-3">
+          <p className="text-sm font-medium text-amber-800">
+            {errorCiudades || "No hay ciudades de entrega disponibles."}
+          </p>
+          <button
+            type="button"
+            onClick={() => setReintentoCiudades((n) => n + 1)}
+            className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-amber-900 underline"
+            style={{ minHeight: "44px" }}
+          >
+            <span className="material-icons-round text-base">refresh</span>
+            Reintentar
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-[var(--text)] mb-2">Ciudad</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => { setCiudadEntregaId(""); setZonaEntregaId(""); }}
+              className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${!ciudadEntregaId ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
+              style={{ minHeight: "44px", fontSize: "16px" }}
+            >
+              Seleccionar
+            </button>
+            {ciudadesEntrega.map((city) => (
+              <button
+                key={city.id}
+                type="button"
+                onClick={() => { setCiudadEntregaId(city.id); setZonaEntregaId(""); }}
+                className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${ciudadEntregaId === city.id ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
+                style={{ minHeight: "44px", fontSize: "16px" }}
+              >
+                {city.nombre}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {ciudadEntrega && (
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-[var(--text)] mb-2">Zona</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setZonaEntregaId("")}
+                className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${!zonaEntregaId ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
+                style={{ minHeight: "44px", fontSize: "16px" }}
+              >
+                Seleccionar
+              </button>
+              {ciudadEntrega?.zonas?.map((zone) => (
+                <button
+                  key={zone.id}
+                  type="button"
+                  onClick={() => setZonaEntregaId(zone.id)}
+                  className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${zonaEntregaId === zone.id ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
+                  style={{ minHeight: "44px", fontSize: "16px" }}
+                >
+                  {zone.nombre}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ciudadEntrega && (ciudadEntrega.zonas || []).length === 0 && (
+          <p className="mt-2 text-xs text-[var(--textSecondary)]">Esta ciudad todavía no tiene zonas configuradas.</p>
+        )}
+        {ciudadEntrega && zonaEntrega && (
+          <p className="mt-3 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/10 px-3 py-2 rounded-lg border border-[var(--primary)]/20">
+            {envioGratis && cobroFijoZona !== undefined
+              ? `Envío con tarifa especial: $${cobroFijoZona.toFixed(2)} (por alcanzar el mínimo)`
+              : envioGratis
+              ? "Tu envío será gratis por alcanzar el mínimo."
+              : `Costo de entrega: $${costoEnvio.toFixed(2)} (Mínimo para envío gratis: $${montoMinimoGratisCiudad.toFixed(2)})`}
+          </p>
+        )}
+      </>
+    );
+  };
 
   return (
     <>
@@ -561,63 +729,8 @@ export default function CartPage() {
                         <span className="material-icons-round text-lg">location_on</span>
                         ¿Dónde quieres recibir tu pedido?
                       </p>
-                      
-                      {/* Selección de ciudad como botones */}
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium text-[var(--text)] mb-2">Ciudad</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => { setCiudadEntregaId(""); setZonaEntregaId(""); }}
-                            className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${!ciudadEntregaId ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
-                            style={{ minHeight: "44px", fontSize: "16px" }}
-                          >
-                            Seleccionar
-                          </button>
-                          {ciudadesEntrega.map((city) => (
-                            <button
-                              key={city.id}
-                              type="button"
-                              onClick={() => { setCiudadEntregaId(city.id); setZonaEntregaId(""); }}
-                              className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${ciudadEntregaId === city.id ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
-                              style={{ minHeight: "44px", fontSize: "16px" }}
-                            >
-                              {city.nombre}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
 
-                      {/* Selección de zona como botones */}
-                      {ciudadEntrega && (
-                        <div className="mb-3">
-                          <label className="block text-sm font-medium text-[var(--text)] mb-2">Zona</label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setZonaEntregaId("")}
-                              className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${!zonaEntregaId ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
-                              style={{ minHeight: "44px", fontSize: "16px" }}
-                            >
-                              Seleccionar
-                            </button>
-                            {ciudadEntrega?.zonas?.map((zone) => (
-                              <button
-                                key={zone.id}
-                                type="button"
-                                onClick={() => setZonaEntregaId(zone.id)}
-                                className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${zonaEntregaId === zone.id ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
-                                style={{ minHeight: "44px", fontSize: "16px" }}
-                              >
-                                {zone.nombre}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {ciudadEntrega && (ciudadEntrega.zonas || []).length === 0 && <p className="mt-2 text-xs text-[var(--textSecondary)]">Esta ciudad todavía no tiene zonas configuradas.</p>}
-                      {ciudadEntrega && zonaEntrega && <p className="mt-3 text-xs font-semibold text-[var(--primary)] bg-[var(--primary)]/10 px-3 py-2 rounded-lg border border-[var(--primary)]/20">{envioGratis && cobroFijoZona !== undefined ? `Envío con tarifa especial: $${cobroFijoZona.toFixed(2)} (por alcanzar el mínimo)` : envioGratis ? "Tu envío será gratis por alcanzar el mínimo." : `Costo de entrega: $${costoEnvio.toFixed(2)} (Mínimo para envío gratis: $${montoMinimoGratisCiudad.toFixed(2)})`}</p>}
+                      {renderSelectorCiudadZona()}
                     </div>
                     <div className="rounded-xl border-2 border-[var(--primary)]/20 bg-gradient-to-br from-[var(--primary)]/5 to-[var(--primaryHover)]/5 p-4 shadow-sm">
                       <p className="mb-3 text-sm font-bold text-[var(--primary)] flex items-center gap-2">
@@ -678,21 +791,21 @@ export default function CartPage() {
         </main>
       </div>
       {!isLogged && <BottomBarPublic />}
-      
+
       {/* Modal de Transferencia */}
       {showTransferModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[var(--card)] rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-[var(--text)]">Pagar por Transferencia</h2>
-              <button 
+              <button
                 onClick={() => setShowTransferModal(false)}
                 className="text-[var(--textSecondary)] hover:text-[var(--text)]"
               >
                 <span className="material-icons-round">close</span>
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--text)] mb-1">Nombre o razón social</label>
@@ -705,7 +818,7 @@ export default function CartPage() {
                   style={{ minHeight: "44px", fontSize: "16px" }}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-[var(--text)] mb-1">Cédula/RUC</label>
                 <input
@@ -717,7 +830,7 @@ export default function CartPage() {
                   style={{ minHeight: "44px", fontSize: "16px" }}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-[var(--text)] mb-1">Teléfono</label>
                 <input
@@ -729,7 +842,7 @@ export default function CartPage() {
                   style={{ minHeight: "44px", fontSize: "16px" }}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-[var(--text)] mb-1">Correo electrónico</label>
                 <input
@@ -741,7 +854,7 @@ export default function CartPage() {
                   style={{ minHeight: "44px", fontSize: "16px" }}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-[var(--text)] mb-1">Cuenta bancaria</label>
                 <select
@@ -758,7 +871,7 @@ export default function CartPage() {
                   ))}
                 </select>
               </div>
-              
+
               {transferencia.cuentaBancariaId && cuentaSeleccionada && (
                 <div className="bg-[var(--primary)]/10 border border-[var(--primary)]/20 rounded-lg p-4">
                   <h3 className="font-bold text-[var(--primary)] mb-2">Información de cuenta</h3>
@@ -772,7 +885,7 @@ export default function CartPage() {
                   </div>
                 </div>
               )}
-              
+
               <div>
                 <label className="block text-sm font-medium text-[var(--text)] mb-1">Evidencia de pago</label>
                 <input
@@ -784,7 +897,7 @@ export default function CartPage() {
                 />
                 <p className="text-xs text-[var(--textSecondary)] mt-1">Sube una captura del comprobante de transferencia</p>
               </div>
-              
+
               <button
                 onClick={handleTransferirPago}
                 disabled={!transferencia.nombre || !transferencia.telefono || !transferencia.correo || !transferencia.cuentaBancariaId || !transferencia.evidencia || isSubmitting}
