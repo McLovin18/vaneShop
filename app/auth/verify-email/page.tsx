@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, AlertCircle, Loader } from "lucide-react";
 
+// Forzar renderizado dinámico para evitar error de prerendering
+export const dynamic = 'force-dynamic';
+
 type VerificationState = "loading" | "success" | "expired" | "error";
 
 export default function VerifyEmailPage() {
