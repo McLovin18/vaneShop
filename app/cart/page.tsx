@@ -485,9 +485,19 @@ export default function CartPage() {
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => { setCiudadEntregaId(""); setZonaEntregaId(""); }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setCiudadEntregaId("");
+                setZonaEntregaId("");
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                setCiudadEntregaId("");
+                setZonaEntregaId("");
+              }}
               className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${!ciudadEntregaId ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
-              style={{ minHeight: "44px", fontSize: "16px" }}
+              style={{ minHeight: "48px", fontSize: "16px", position: "relative", zIndex: 5 }}
             >
               Seleccionar
             </button>
@@ -495,9 +505,19 @@ export default function CartPage() {
               <button
                 key={city.id}
                 type="button"
-                onClick={() => { setCiudadEntregaId(city.id); setZonaEntregaId(""); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCiudadEntregaId(city.id);
+                  setZonaEntregaId("");
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  setCiudadEntregaId(city.id);
+                  setZonaEntregaId("");
+                }}
                 className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${ciudadEntregaId === city.id ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
-                style={{ minHeight: "44px", fontSize: "16px" }}
+                style={{ minHeight: "48px", fontSize: "16px", position: "relative", zIndex: 5 }}
               >
                 {city.nombre}
               </button>
@@ -511,9 +531,17 @@ export default function CartPage() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setZonaEntregaId("")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setZonaEntregaId("");
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  setZonaEntregaId("");
+                }}
                 className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${!zonaEntregaId ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
-                style={{ minHeight: "44px", fontSize: "16px" }}
+                style={{ minHeight: "48px", fontSize: "16px", position: "relative", zIndex: 5 }}
               >
                 Seleccionar
               </button>
@@ -521,9 +549,17 @@ export default function CartPage() {
                 <button
                   key={zone.id}
                   type="button"
-                  onClick={() => setZonaEntregaId(zone.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setZonaEntregaId(zone.id);
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    setZonaEntregaId(zone.id);
+                  }}
                   className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${zonaEntregaId === zone.id ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--primary)]/50"}`}
-                  style={{ minHeight: "44px", fontSize: "16px" }}
+                  style={{ minHeight: "48px", fontSize: "16px", position: "relative", zIndex: 5 }}
                 >
                   {zone.nombre}
                 </button>
@@ -748,11 +784,22 @@ export default function CartPage() {
                       <p className="mt-2 text-xs text-[var(--textSecondary)]">Ingresa la dirección exacta donde deseas recibir tu pedido</p>
                     </div>
                     <button
-                      onClick={handleGenerarOrden}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log("Click en botón tarjeta");
+                        handleGenerarOrden();
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        console.log("Touch en botón tarjeta");
+                        handleGenerarOrden();
+                      }}
                       disabled={!ciudadEntrega || !zonaEntrega}
-                      className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-[var(--primary)] to-[var(--primaryHover)] hover:from-[var(--primaryHover)] hover:to-[var(--primary)] text-white font-extrabold text-sm rounded-xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-md transform hover:scale-[1.02] active:scale-[0.98] touch-action-manipulation"
+                      className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-[var(--primary)] to-[var(--primaryHover)] hover:from-[var(--primaryHover)] hover:to-[var(--primary)] text-white font-extrabold text-sm rounded-xl shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-md"
                       title="Enviar pedido por WhatsApp"
-                      style={{ minHeight: "44px", fontSize: "16px" }}
+                      style={{ minHeight: "48px", fontSize: "16px", position: "relative", zIndex: 10 }}
                     >
                       <span className="material-icons-round text-lg">chat</span>
                       Pagar con tarjeta de credito/debito
@@ -774,11 +821,22 @@ export default function CartPage() {
                       </div>
                     </button>
                     <button
-                      onClick={() => setShowTransferModal(true)}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log("Click en botón transferencia");
+                        setShowTransferModal(true);
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        console.log("Touch en botón transferencia");
+                        setShowTransferModal(true);
+                      }}
                       disabled={!ciudadEntrega || !zonaEntrega}
-                      className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-extrabold text-sm rounded-xl transition-all shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-md transform hover:scale-[1.02] active:scale-[0.98] touch-action-manipulation"
+                      className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-extrabold text-sm rounded-xl shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-md"
                       title="Pagar por transferencia bancaria"
-                      style={{ minHeight: "44px", fontSize: "16px" }}
+                      style={{ minHeight: "48px", fontSize: "16px", position: "relative", zIndex: 10 }}
                     >
                       <span className="material-icons-round text-lg">account_balance</span>
                       Pagar por Transferencia
