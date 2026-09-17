@@ -94,6 +94,11 @@ export default function CartPage() {
   const [errorCiudades, setErrorCiudades] = useState("");
   const [reintentoCiudades, setReintentoCiudades] = useState(0);
 
+  // Estado de carga del botón de pago con tarjeta, para dar feedback
+  // visual mientras se resuelve generateWhatsAppMessage (Firestore puede
+  // tardar en WebViews restringidos) y evitar dobles clics.
+  const [generandoOrdenTarjeta, setGenerandoOrdenTarjeta] = useState(false);
+
   // Modal de transferencia
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -223,8 +228,20 @@ export default function CartPage() {
     return "";
   };
 
+  // FIX: antes esta función llamaba a obtenerBodegas() sin ningún timeout.
+  // En el WebView de Instagram/TikTok en iOS, Firestore puede colgarse sin
+  // resolver ni lanzar error (igual que le pasaba al selector de ciudades),
+  // así que el botón de "pagar con tarjeta" se quedaba esperando para
+  // siempre sin dar ningún feedback. Ahora usamos withTimeout igual que en
+  // el resto del componente, y si falla, seguimos sin tiempos de entrega
+  // en vez de bloquear todo el flujo de pago.
   const generateWhatsAppMessage = async (): Promise<string> => {
-    const bodegas = await obtenerBodegas();
+    let bodegas: any[] = [];
+    try {
+      bodegas = await withTimeout(obtenerBodegas(), 8000, "obtenerBodegas");
+    } catch (err) {
+      console.error("Error cargando bodegas (se continúa sin tiempos de entrega):", err);
+    }
     const bodegasMap = new Map(bodegas.map((b) => [b.id, b.tiempoEntrega]));
 
     const productosText = carrito
@@ -246,6 +263,19 @@ export default function CartPage() {
     return encodeURIComponent(message);
   };
 
+  // FIX: reescrito para el WebView de Instagram en iOS.
+  // 1) window.open(...) ahora se llama de forma SÍNCRONA, dentro del mismo
+  //    gesto de click, antes de cualquier await. Muchos WebViews embebidos
+  //    (Instagram especialmente) sólo permiten abrir una ventana nueva si
+  //    ocurre de forma directa dentro del handler del evento; si hay un
+  //    await de por medio, WebKit deja de considerarlo "iniciado por el
+  //    usuario" y bloquea el popup en silencio (sin aviso de "popup
+  //    bloqueado" ni error visible: el botón simplemente "no reacciona").
+  // 2) Se agrega try/catch con setError, así si generateWhatsAppMessage
+  //    falla (o tarda más del timeout interno de obtenerBodegas), el
+  //    usuario ve un mensaje en vez de quedarse esperando indefinidamente.
+  // 3) Se agrega estado de carga (generandoOrdenTarjeta) para dar
+  //    feedback visual inmediato al tocar el botón.
   const handleGenerarOrden = async () => {
     setError("");
 
@@ -277,9 +307,34 @@ export default function CartPage() {
       }
     }
 
-    const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || "593984880468";
-    const message = await generateWhatsAppMessage();
-    window.open(`https://wa.me/${whatsappNumber}?text=${message}`, "_blank");
+    setGenerandoOrdenTarjeta(true);
+
+    // Abrimos la ventana YA, de forma síncrona, dentro del gesto del click,
+    // antes de cualquier await. Si el WebView bloquea igual el popup,
+    // nuevaVentana será null y hacemos fallback a window.location.href.
+    const nuevaVentana = window.open("", "_blank");
+
+    try {
+      const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || "593984880468";
+      const message = await generateWhatsAppMessage();
+      const url = `https://wa.me/${whatsappNumber}?text=${message}`;
+
+      if (nuevaVentana && !nuevaVentana.closed) {
+        nuevaVentana.location.href = url;
+      } else {
+        window.location.href = url;
+      }
+    } catch (err: any) {
+      console.error("Error generando la orden para WhatsApp:", err);
+      if (nuevaVentana && !nuevaVentana.closed) {
+        nuevaVentana.close();
+      }
+      setError(
+        "No se pudo generar el pedido. Si estás en el navegador integrado de Instagram/TikTok, prueba abrir la tienda en Safari o Chrome (botón de menú → 'Abrir en el navegador')."
+      );
+    } finally {
+      setGenerandoOrdenTarjeta(false);
+    }
   };
 
   const handleCantidad = (id: string, cantidad: number) => {
@@ -796,29 +851,38 @@ export default function CartPage() {
                         console.log("Touch en botón tarjeta");
                         handleGenerarOrden();
                       }}
-                      disabled={!ciudadEntrega || !zonaEntrega}
+                      disabled={!ciudadEntrega || !zonaEntrega || generandoOrdenTarjeta}
                       className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-[var(--primary)] to-[var(--primaryHover)] hover:from-[var(--primaryHover)] hover:to-[var(--primary)] text-white font-extrabold text-sm rounded-xl shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-md"
                       title="Enviar pedido por WhatsApp"
                       style={{ minHeight: "48px", fontSize: "16px", position: "relative", zIndex: 10 }}
                     >
-                      <span className="material-icons-round text-lg">chat</span>
-                      Pagar con tarjeta de credito/debito
-                      <div className="flex items-center gap-1 ml-1">
-                        <svg className="w-6 h-4" viewBox="0 0 48 32" fill="none">
-                          <rect width="48" height="32" rx="4" fill="#1A1F71"/>
-                          <path d="M19.5 21.5H17L18.5 12H21L19.5 21.5Z" fill="white"/>
-                          <path d="M28 12.5C27.5 12.3 26.7 12 25.7 12C23.2 12 21.5 13.2 21.5 15C21.5 16.3 22.7 17 23.7 17.5C24.7 18 25 18.3 25 18.8C25 19.5 24.2 19.8 23.5 19.8C22.5 19.8 21.8 19.6 21 19.2L20.7 19L20.3 21.5C21 21.8 22 22 23.2 22C25.8 22 27.5 20.8 27.5 19C27.5 18 26.8 17.3 25.3 16.5C24.3 16 23.7 15.7 23.7 15.2C23.7 14.8 24.2 14.3 25.3 14.3C26.2 14.3 26.8 14.5 27.3 14.7L27.5 14.8L28 12.5Z" fill="white"/>
-                          <path d="M32 12H30C29.5 12 29 12.2 28.8 12.8L25 21.5H27.5L28 20H31L31.3 21.5H33.5L31.5 12H32ZM28.8 18L29.8 15L30.3 18H28.8Z" fill="white"/>
-                          <path d="M15 12L12.5 18.5L12.2 17.2C11.7 15.8 10.3 14.2 8.7 13.5L11 21.5H13.5L17.5 12H15Z" fill="white"/>
-                          <path d="M10.5 12H6.5L6.5 12.3C9.5 13 11.5 14.8 12.2 17.2L11.5 12.8C11.3 12.2 10.8 12 10.5 12Z" fill="#F9A533"/>
-                        </svg>
-                        <svg className="w-6 h-4" viewBox="0 0 48 32" fill="none">
-                          <rect width="48" height="32" rx="4" fill="#EB001B"/>
-                          <rect x="24" width="24" height="32" fill="#F79E1B"/>
-                          <path d="M24 6C20.5 6 17.5 8.5 16.5 12C17.5 15.5 20.5 18 24 18C27.5 18 30.5 15.5 31.5 12C30.5 8.5 27.5 6 24 6Z" fill="#FF5F00"/>
-                          <path d="M24 8C21.5 8 19.5 9.8 18.8 12C19.5 14.2 21.5 16 24 16C26.5 16 28.5 14.2 29.2 12C28.5 9.8 26.5 8 24 8Z" fill="white"/>
-                        </svg>
-                      </div>
+                      {generandoOrdenTarjeta ? (
+                        <>
+                          <span className="material-icons-round text-lg animate-spin">refresh</span>
+                          Generando pedido...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-icons-round text-lg">chat</span>
+                          Pagar con tarjeta de credito/debito
+                          <div className="flex items-center gap-1 ml-1">
+                            <svg className="w-6 h-4" viewBox="0 0 48 32" fill="none">
+                              <rect width="48" height="32" rx="4" fill="#1A1F71"/>
+                              <path d="M19.5 21.5H17L18.5 12H21L19.5 21.5Z" fill="white"/>
+                              <path d="M28 12.5C27.5 12.3 26.7 12 25.7 12C23.2 12 21.5 13.2 21.5 15C21.5 16.3 22.7 17 23.7 17.5C24.7 18 25 18.3 25 18.8C25 19.5 24.2 19.8 23.5 19.8C22.5 19.8 21.8 19.6 21 19.2L20.7 19L20.3 21.5C21 21.8 22 22 23.2 22C25.8 22 27.5 20.8 27.5 19C27.5 18 26.8 17.3 25.3 16.5C24.3 16 23.7 15.7 23.7 15.2C23.7 14.8 24.2 14.3 25.3 14.3C26.2 14.3 26.8 14.5 27.3 14.7L27.5 14.8L28 12.5Z" fill="white"/>
+                              <path d="M32 12H30C29.5 12 29 12.2 28.8 12.8L25 21.5H27.5L28 20H31L31.3 21.5H33.5L31.5 12H32ZM28.8 18L29.8 15L30.3 18H28.8Z" fill="white"/>
+                              <path d="M15 12L12.5 18.5L12.2 17.2C11.7 15.8 10.3 14.2 8.7 13.5L11 21.5H13.5L17.5 12H15Z" fill="white"/>
+                              <path d="M10.5 12H6.5L6.5 12.3C9.5 13 11.5 14.8 12.2 17.2L11.5 12.8C11.3 12.2 10.8 12 10.5 12Z" fill="#F9A533"/>
+                            </svg>
+                            <svg className="w-6 h-4" viewBox="0 0 48 32" fill="none">
+                              <rect width="48" height="32" rx="4" fill="#EB001B"/>
+                              <rect x="24" width="24" height="32" fill="#F79E1B"/>
+                              <path d="M24 6C20.5 6 17.5 8.5 16.5 12C17.5 15.5 20.5 18 24 18C27.5 18 30.5 15.5 31.5 12C30.5 8.5 27.5 6 24 6Z" fill="#FF5F00"/>
+                              <path d="M24 8C21.5 8 19.5 9.8 18.8 12C19.5 14.2 21.5 16 24 16C26.5 16 28.5 14.2 29.2 12C28.5 9.8 26.5 8 24 8Z" fill="white"/>
+                            </svg>
+                          </div>
+                        </>
+                      )}
                     </button>
                     <button
                       type="button"
